@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixelv9-nauka</title>
+  <title>Habit Pixel v17 manualna nauka</title>
 
   <style>
     :root {
@@ -874,6 +874,42 @@
       grid-template-columns: minmax(0, 1fr) minmax(180px, 260px);
     }
 
+    .note-folder-control-grid {
+      align-items: start;
+    }
+
+    .note-folder-control-grid .field-label {
+      align-self: start;
+    }
+
+    #noteFolderPasswordInput {
+      height: 44px;
+      min-height: 44px;
+      max-height: 44px;
+      line-height: 1.2;
+    }
+
+    .button-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      background: linear-gradient(180deg, #eef3ff, #cddcff);
+      color: #05070c;
+      border: none;
+      border-radius: 13px;
+      padding: 12px 17px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 10px 26px rgba(36, 107, 255, 0.18);
+      transition: transform 0.12s ease, filter 0.12s ease, border-color 0.12s ease;
+    }
+
+    .button-link:hover {
+      filter: brightness(0.95);
+      transform: translateY(-1px);
+    }
+
     .note-folder {
       display: grid;
       gap: 10px;
@@ -1176,6 +1212,112 @@
       border-color: rgba(255, 107, 107, 0.38);
     }
 
+    .study-bulk-area {
+      min-height: 110px;
+      font-family: Consolas, monospace;
+      font-size: 13px;
+    }
+
+    .study-word-list.hidden-list {
+      display: none;
+    }
+
+    .study-quiz-launcher {
+      display: grid;
+      gap: 10px;
+      margin: 18px 0;
+      background: rgba(8, 11, 18, 0.94);
+      border: 1px solid rgba(93, 141, 255, 0.26);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      width: 100vw;
+      height: 100dvh;
+      z-index: 99999;
+      display: none;
+      place-items: center;
+      padding: 24px 16px;
+      background: rgba(0, 0, 0, 0.68);
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    .modal-backdrop.active {
+      display: grid;
+      animation: fadeIn 0.16s ease-out;
+    }
+
+    .modal-card {
+      position: relative;
+      width: min(640px, 100%);
+      max-height: calc(100dvh - 48px);
+      margin: auto;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+      border-radius: 26px;
+      background: linear-gradient(180deg, rgba(13, 17, 26, 0.98), rgba(5, 7, 12, 0.98));
+      border: 1px solid var(--border-strong);
+      box-shadow: 0 30px 100px rgba(0, 0, 0, 0.62);
+      padding: 18px;
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .modal-title {
+      margin: 0 0 6px;
+      font-size: 23px;
+    }
+
+    .modal-close {
+      width: 42px;
+      height: 42px;
+      padding: 0;
+      border-radius: 14px;
+      background: rgba(17, 24, 39, 0.92);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      font-size: 18px;
+    }
+
+    .quiz-question-card {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 20px;
+      background: rgba(17, 24, 39, 0.74);
+      border: 1px solid var(--border);
+    }
+
+    .quiz-big-word {
+      display: block;
+      margin-top: 8px;
+      font-size: clamp(28px, 8vw, 46px);
+      line-height: 1.05;
+      font-weight: 950;
+      letter-spacing: -0.03em;
+      color: #eef3ff;
+      word-break: break-word;
+    }
+
+    .quiz-status-note {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
     .note-folder-lock {
       display: flex;
       gap: 8px;
@@ -1353,6 +1495,29 @@
         justify-content: flex-start;
       }
 
+      .modal-backdrop {
+        padding: 18px 10px;
+      }
+
+      .modal-card {
+        width: min(100%, 560px);
+        max-height: calc(100dvh - 36px);
+        border-radius: 22px;
+      }
+
+      .modal-backdrop {
+        padding: 0;
+      }
+
+      .modal-card {
+        top: 50dvh;
+        left: 50vw;
+        width: calc(100vw - 20px);
+        max-height: calc(100dvh - 24px);
+        border-radius: 22px;
+        padding: 14px;
+      }
+
       .footer-btn {
         font-size: 10px;
         padding: 9px 4px;
@@ -1362,6 +1527,377 @@
         font-size: 17px;
       }
     }
+
+
+    /* v17: bardziej kompaktowy interfejs telefonu */
+    @media (max-width: 600px) {
+      body {
+        font-size: 14px;
+        padding: 104px 8px 76px;
+      }
+
+      header {
+        padding: 8px 8px 7px;
+      }
+
+      .header-inner {
+        gap: 7px;
+      }
+
+      .title-box h1 {
+        font-size: 17px;
+        letter-spacing: 1.5px;
+      }
+
+      .title-box span {
+        display: none;
+      }
+
+      .top-metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+      }
+
+      .top-chip {
+        min-width: 0;
+        padding: 6px 5px;
+        border-radius: 12px;
+        text-align: center;
+      }
+
+      .top-chip span {
+        font-size: 9px;
+        line-height: 1.15;
+        white-space: normal;
+        margin-bottom: 1px;
+      }
+
+      .top-chip b {
+        font-size: 12px;
+        line-height: 1.15;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .card {
+        padding: 11px;
+        border-radius: 18px;
+      }
+
+      .section-head {
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+
+      .section-title {
+        font-size: 21px;
+        margin-bottom: 5px;
+      }
+
+      .section-head .muted,
+      .muted,
+      .info,
+      .inline-note {
+        font-size: 12px;
+        line-height: 1.42;
+      }
+
+      .date-pill {
+        padding: 7px 9px;
+        font-size: 11px;
+      }
+
+      .dashboard-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 7px;
+        margin: 10px 0 13px;
+      }
+
+      .stat-card {
+        min-height: 68px;
+        padding: 9px;
+        border-radius: 14px;
+      }
+
+      .stat-card::after {
+        width: 54px;
+        height: 54px;
+        right: -22px;
+        top: -22px;
+      }
+
+      .stat-label {
+        font-size: 9px;
+        margin-bottom: 5px;
+        letter-spacing: 0.06em;
+      }
+
+      .stat-value {
+        font-size: 21px;
+      }
+
+      .stat-sub {
+        margin-top: 5px;
+        font-size: 10.5px;
+        line-height: 1.22;
+      }
+
+      .habit-card,
+      .note-card,
+      .training-day-card,
+      .habit-order-item,
+      .study-word-card,
+      .locked-folder-box {
+        padding: 11px;
+        border-radius: 16px;
+      }
+
+      .habit-title,
+      .exercise-title {
+        font-size: 16px;
+      }
+
+      .habit-description,
+      .exercise-meta,
+      .note-body {
+        font-size: 12px;
+        line-height: 1.42;
+      }
+
+      .habit-stats {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+        margin: 10px 0 8px;
+      }
+
+      .mini-stat {
+        min-height: 58px;
+        padding: 8px;
+        border-radius: 12px;
+      }
+
+      .mini-stat span {
+        font-size: 9.5px;
+        margin-bottom: 4px;
+      }
+
+      .mini-stat b {
+        font-size: 14px;
+      }
+
+      .mini-stat small {
+        font-size: 9.5px;
+      }
+
+      .study-form,
+      .study-quiz-box,
+      .study-quiz-launcher,
+      .note-form,
+      .training-form,
+      .settings-box,
+      .data-transfer-box {
+        padding: 11px;
+        margin: 12px 0;
+        gap: 9px;
+        border-radius: 15px;
+      }
+
+      .study-form h3,
+      .study-quiz-launcher h3,
+      .note-form h3,
+      .training-form h3,
+      .settings-box h3 {
+        font-size: 15px;
+      }
+
+      .settings-grid {
+        gap: 8px;
+      }
+
+      .field-label {
+        gap: 5px;
+        font-size: 12px;
+      }
+
+      input, textarea, select {
+        min-height: 38px;
+        padding: 9px 10px;
+        border-radius: 11px;
+        font-size: 14px;
+      }
+
+      textarea {
+        min-height: 62px;
+      }
+
+      button {
+        padding: 9px 12px;
+        border-radius: 11px;
+        font-size: 13px;
+      }
+
+      .small-btn {
+        padding: 7px 9px;
+        font-size: 12px;
+      }
+
+      .settings-row,
+      .quick-actions-row,
+      .habit-actions,
+      .note-actions,
+      .exercise-actions,
+      .order-actions {
+        gap: 6px;
+      }
+
+      .study-word-list,
+      .notes-list,
+      .training-day-list,
+      .development-list,
+      .exercise-list,
+      .habit-order-list {
+        gap: 8px;
+        margin-top: 10px;
+      }
+
+      .study-word-main,
+      .note-folder-body {
+        gap: 6px;
+      }
+
+      .note-folder {
+        padding: 9px;
+        border-radius: 16px;
+        gap: 8px;
+      }
+
+      .note-folder-head,
+      .note-top,
+      .training-day-top,
+      .exercise-row,
+      .habit-order-item {
+        gap: 8px;
+      }
+
+      .progress-meter {
+        height: 9px;
+        margin-top: 7px;
+      }
+
+      .development-row {
+        padding: 8px 9px;
+        gap: 7px;
+        border-radius: 12px;
+      }
+
+      canvas {
+        height: 230px;
+      }
+
+      .chart-box {
+        padding: 8px;
+        border-radius: 14px;
+      }
+
+      .grid,
+      .grid.training-grid-only {
+        gap: 1.5px;
+        padding-top: 8px;
+        padding-bottom: 6px;
+      }
+
+      .day {
+        border-radius: 1.5px;
+      }
+
+      .modal-backdrop {
+        display: none;
+        place-items: center;
+        padding: 8px;
+      }
+
+      .modal-backdrop.active {
+        display: grid;
+      }
+
+      .modal-card {
+        position: relative;
+        top: auto;
+        left: auto;
+        transform: none;
+        width: min(100%, 520px);
+        max-height: calc(100dvh - 16px);
+        padding: 12px;
+        border-radius: 18px;
+      }
+
+      .modal-title {
+        font-size: 19px;
+      }
+
+      .modal-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+      }
+
+      .quiz-question-card {
+        padding: 12px;
+        border-radius: 16px;
+        gap: 9px;
+      }
+
+      .quiz-big-word {
+        font-size: clamp(24px, 9vw, 36px);
+      }
+
+      footer {
+        padding: 6px 7px;
+      }
+
+      .footer-inner {
+        gap: 4px;
+      }
+
+      .footer-btn {
+        font-size: 9px;
+        padding: 6px 2px;
+        border-radius: 12px;
+        gap: 1px;
+      }
+
+      .footer-btn span:first-child {
+        font-size: 14px;
+      }
+
+      .footer-btn.main {
+        transform: translateY(-4px);
+      }
+    }
+
+    @media (max-width: 380px) {
+      .top-chip span {
+        font-size: 8.5px;
+      }
+
+      .top-chip b {
+        font-size: 11px;
+      }
+
+      .dashboard-grid {
+        gap: 6px;
+      }
+
+      .stat-card {
+        min-height: 64px;
+        padding: 8px;
+      }
+
+      .stat-value {
+        font-size: 19px;
+      }
+    }
+
   </style>
 </head>
 
@@ -1502,6 +2038,7 @@
 
       <div class="study-form">
         <h3 style="margin: 0;">Dodaj słówko</h3>
+        <p class="inline-note" style="margin: 0;">Tłumaczenia alternatywne wpisuj po średniku, przecinku albo ukośniku, np. <b>dom; mieszkanie; budynek</b>. Quiz uzna każde z nich.</p>
         <div class="settings-grid">
           <label class="field-label">
             Słowo / zwrot
@@ -1510,34 +2047,70 @@
 
           <label class="field-label">
             Tłumaczenie
-            <input id="studyTranslationInput" placeholder="Np. dom" />
+            <input id="studyTranslationInput" placeholder="Np. dom; mieszkanie" />
           </label>
         </div>
+
+        <p class="inline-note" style="margin: 0;">
+          Tłumaczenia wpisujesz ręcznie. Przy słowach wieloznacznych dopisz kilka poprawnych wersji, np. <b>dom; mieszkanie; budynek</b>.
+        </p>
 
         <div class="settings-row" style="margin-top: 0;">
           <button onclick="addStudyWord()">Dodaj słówko</button>
         </div>
       </div>
 
-      <div class="study-quiz-box">
-        <h3 style="margin: 0;">Quiz losowy</h3>
-        <p class="muted" id="studyQuizPrompt" style="margin: 0;">Kliknij „Losuj pytanie”, a aplikacja wybierze słówko i kierunek tłumaczenia.</p>
-
-        <label class="field-label">
-          Twoja odpowiedź
-          <input id="studyQuizAnswerInput" placeholder="Wpisz tłumaczenie" onkeydown="handleStudyQuizKey(event)" />
-        </label>
-
+      <div class="study-form">
+        <h3 style="margin: 0;">Import wielu słówek</h3>
+        <p class="inline-note" style="margin: 0;">Wklej listę, każda para w osobnej linii. Obsługiwane formaty: <b>casa = dom; mieszkanie</b>, <b>casa - dom</b>, <b>casa → dom</b>.</p>
+        <textarea id="studyBulkImportInput" class="study-bulk-area" placeholder="casa = dom; mieszkanie
+perro = pies
+libro = książka"></textarea>
         <div class="settings-row" style="margin-top: 0;">
-          <button onclick="startStudyQuiz()">Losuj pytanie</button>
-          <button class="ghost" onclick="checkStudyQuizAnswer()">Sprawdź</button>
+          <button class="ghost" onclick="importStudyBulkWords()">Importuj listę</button>
         </div>
+      </div>
 
-        <div id="studyQuizResult" class="study-result"></div>
+      <div class="study-quiz-launcher">
+        <h3 style="margin: 0;">Quiz losowy</h3>
+        <p class="muted" style="margin: 0;">Quiz otwiera się w osobnym oknie, więc lista słówek nie podpowiada odpowiedzi pod spodem.</p>
+        <div class="settings-row" style="margin-top: 0;">
+          <button onclick="openStudyQuizModal()">Otwórz quiz</button>
+          <button class="ghost" id="studyWordsToggleButton" onclick="toggleStudyWordsVisibility()">Pokaż listę słówek</button>
+        </div>
       </div>
 
       <div class="study-word-list" id="studyWordsList"></div>
     </section>
+
+    <div class="modal-backdrop" id="studyQuizModal" aria-hidden="true" onclick="handleStudyQuizBackdropClick(event)">
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="studyQuizModalTitle">
+        <div class="modal-head">
+          <div>
+            <h3 class="modal-title" id="studyQuizModalTitle">Quiz losowy</h3>
+            <p class="muted" style="margin: 0;">Odpowiedz na pytanie. Po błędzie musisz wpisać poprawną wersję — dopiero wtedy quiz przejdzie dalej.</p>
+          </div>
+          <button class="modal-close" onclick="closeStudyQuizModal()" aria-label="Zamknij quiz">×</button>
+        </div>
+
+        <div class="quiz-question-card">
+          <p class="muted" id="studyQuizPrompt" style="margin: 0;">Kliknij „Losuj pytanie”, a aplikacja wybierze słówko i kierunek tłumaczenia.</p>
+
+          <label class="field-label">
+            Twoja odpowiedź
+            <input id="studyQuizAnswerInput" placeholder="Wpisz tłumaczenie" onkeydown="handleStudyQuizKey(event)" />
+          </label>
+
+          <div class="settings-row" style="margin-top: 0;">
+            <button id="studyQuizDrawButton" onclick="startStudyQuiz()">Losuj pytanie</button>
+            <button class="ghost" id="studyQuizCheckButton" onclick="checkStudyQuizAnswer()">Sprawdź</button>
+          </div>
+
+          <div id="studyQuizResult" class="study-result"></div>
+          <div class="quiz-status-note" id="studyQuizStatusNote">Brak aktywnego pytania.</div>
+        </div>
+      </div>
+    </div>
 
     <section class="view" id="view-two">
       <div class="section-head">
@@ -1565,7 +2138,7 @@
           </label>
         </div>
 
-        <div class="settings-grid note-category-grid">
+        <div class="settings-grid note-category-grid note-folder-control-grid">
           <label class="field-label">
             Hasło folderu opcjonalnie
             <input id="noteFolderPasswordInput" type="password" placeholder="Ustaw hasło dla folderu z pola wyżej" />
@@ -1576,6 +2149,7 @@
             <div class="settings-row" style="margin-top: 0;">
               <button class="ghost" onclick="createOrUpdateNoteFolder()">Utwórz / ustaw folder</button>
               <button class="ghost" onclick="clearNoteFolderPasswordFromInput()">Usuń hasło</button>
+              <button class="danger" onclick="deleteNoteFolderFromInput()">Usuń folder</button>
             </div>
           </div>
         </div>
@@ -1777,6 +2351,16 @@
         </div>
       </div>
 
+      <div class="training-form">
+        <h3 style="margin: 0;">Porównanie siły</h3>
+        <p class="muted" style="margin: 0;">
+          Pełnych tabel Strength Level nie kopiuję do aplikacji, bo to zewnętrzne dane i kalkulator. Zostawiam wygodny odnośnik do strony głównej — wybierasz tam ćwiczenie i wpisujesz swój wynik.
+        </p>
+        <div class="settings-row">
+          <a class="button-link" href="https://strengthlevel.com/" target="_blank" rel="noopener noreferrer">Otwórz Strength Level</a>
+        </div>
+      </div>
+
       <div class="training-day-list" id="trainingDayList"></div>
     </section>
 
@@ -1956,6 +2540,9 @@
           <button class="danger" onclick="resetAllHabits()">Resetuj wykonane dni</button>
           <button class="danger" onclick="resetWeights()">Usuń pomiary wagi</button>
           <button class="danger" onclick="resetTraining()">Usuń plan treningowy</button>
+          <button class="danger" onclick="resetStudyData()">Usuń naukę i słówka</button>
+          <button class="danger" onclick="resetNotesData()">Usuń notatki i foldery</button>
+          <button class="danger" onclick="resetProfileData()">Resetuj profil</button>
         </div>
       </div>
       <div class="settings-box">
@@ -2111,9 +2698,14 @@
     let noteFolderPasswords = JSON.parse(localStorage.getItem(noteFolderPasswordStorageKey)) || {};
     let unlockedNoteFolders = new Set();
     let renderedNoteFolderCategories = [];
+    let selectedNoteCategory = "all";
     let study = JSON.parse(localStorage.getItem(studyStorageKey)) || createDefaultStudy();
     let currentStudyQuiz = null;
+    let studyModalSavedScrollY = 0;
+    let studyCorrectAutoNextTimer = null;
     let training = JSON.parse(localStorage.getItem(trainingStorageKey)) || createDefaultTraining();
+    let weightChartHoverPoint = null;
+    let weightChartHitPoints = [];
 
     const habitsList = document.getElementById("habitsList");
     const headerSubtitle = document.getElementById("headerSubtitle");
@@ -2146,9 +2738,15 @@
     const studyLanguageNameInput = document.getElementById("studyLanguageNameInput");
     const studyWordInput = document.getElementById("studyWordInput");
     const studyTranslationInput = document.getElementById("studyTranslationInput");
+    const studyBulkImportInput = document.getElementById("studyBulkImportInput");
+    const studyQuizModal = document.getElementById("studyQuizModal");
     const studyQuizPrompt = document.getElementById("studyQuizPrompt");
     const studyQuizAnswerInput = document.getElementById("studyQuizAnswerInput");
     const studyQuizResult = document.getElementById("studyQuizResult");
+    const studyQuizDrawButton = document.getElementById("studyQuizDrawButton");
+    const studyQuizCheckButton = document.getElementById("studyQuizCheckButton");
+    const studyQuizStatusNote = document.getElementById("studyQuizStatusNote");
+    const studyWordsToggleButton = document.getElementById("studyWordsToggleButton");
     const studyWordsList = document.getElementById("studyWordsList");
     const developmentChart = document.getElementById("developmentChart");
     const developmentChartInfo = document.getElementById("developmentChartInfo");
@@ -2220,6 +2818,7 @@
     const googleClientIdStorageKey = "habit-pixel-google-client-id";
     const driveAutoSyncStorageKey = "habit-pixel-drive-auto-sync";
     const localChangeStorageKey = "habit-pixel-last-local-change";
+    const studyWordsVisibleStorageKey = "habit-pixel-study-words-visible";
     const driveBackupFileName = "habit_pixel_backup.json";
     const driveScope = "https://www.googleapis.com/auth/drive.appdata";
     let googleAccessToken = "";
@@ -2763,6 +3362,57 @@
       renderNotes();
     }
 
+    function deleteNoteFolder(category) {
+      const normalized = normalizeNoteCategory(category);
+      normalizeNoteFolders();
+
+      if (!normalized || !noteFolders.includes(normalized)) {
+        alert("Nie znaleziono takiego folderu.");
+        return;
+      }
+
+      if (normalized === "Ogólne") {
+        alert("Folderu Ogólne nie można usunąć, bo jest folderem awaryjnym dla notatek bez kategorii.");
+        return;
+      }
+
+      const notesInFolder = notes.filter(note => normalizeNoteCategory(note.category) === normalized).length;
+      const message = notesInFolder
+        ? `Usunąć folder "${normalized}"? ${notesInFolder} notatek zostanie przeniesionych do folderu Ogólne.`
+        : `Usunąć pusty folder "${normalized}"?`;
+
+      if (!confirm(message)) return;
+
+      notes = notes.map(note => (
+        normalizeNoteCategory(note.category) === normalized
+          ? { ...note, category: "Ogólne", updatedAt: new Date().toISOString() }
+          : note
+      ));
+
+      noteFolders = noteFolders.filter(folder => normalizeNoteCategory(folder) !== normalized);
+      delete noteFolderPasswords[normalized];
+      unlockedNoteFolders.delete(normalized);
+
+      if (selectedNoteCategory === normalized) selectedNoteCategory = "all";
+      if (noteCategoryInput && normalizeNoteCategory(noteCategoryInput.value) === normalized) noteCategoryInput.value = "";
+
+      saveNotes();
+      saveNoteFolders();
+      renderNotes();
+      renderDevelopment();
+    }
+
+    function deleteNoteFolderFromInput() {
+      if (!noteCategoryInput) return;
+      deleteNoteFolder(noteCategoryInput.value);
+    }
+
+    function deleteRenderedNoteFolder(groupIndex) {
+      const category = renderedNoteFolderCategories[groupIndex];
+      if (!category) return;
+      deleteNoteFolder(category);
+    }
+
     function renderNoteCategoryOptions() {
       const categories = getNoteCategories();
 
@@ -2816,6 +3466,83 @@
       localStorage.setItem(noteFoldersStorageKey, JSON.stringify(noteFolders));
       localStorage.setItem(noteFolderPasswordStorageKey, JSON.stringify(noteFolderPasswords));
       markLocalDataChanged();
+    }
+
+    function splitStudyImportLine(line) {
+      const text = String(line || "").trim();
+      if (!text) return null;
+
+      const separators = ["=>", "->", "→", "=", "	", " - ", " – ", " — "];
+      for (const separator of separators) {
+        const index = text.indexOf(separator);
+        if (index > 0) {
+          return [text.slice(0, index).trim(), text.slice(index + separator.length).trim()];
+        }
+      }
+
+      return null;
+    }
+
+    function importStudyBulkWords() {
+      let language = getSelectedStudyLanguage();
+      if (!language && studyLanguageNameInput && studyLanguageNameInput.value.trim()) {
+        addStudyLanguage();
+        language = getSelectedStudyLanguage();
+      }
+
+      if (!language) {
+        alert("Najpierw utwórz albo wybierz kategorię nauki.");
+        return;
+      }
+
+      const raw = studyBulkImportInput ? studyBulkImportInput.value : "";
+      const lines = raw.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+      if (!lines.length) {
+        alert("Wklej przynajmniej jedną linię ze słówkiem i tłumaczeniem.");
+        return;
+      }
+
+      const existingKeys = new Set(language.words.map(word => `${normalizeQuizAnswer(word.source)}::${normalizeQuizAnswer(word.target)}`));
+      let added = 0;
+      let skipped = 0;
+
+      lines.forEach(line => {
+        const pair = splitStudyImportLine(line);
+        if (!pair) {
+          skipped++;
+          return;
+        }
+
+        const source = normalizeStudyName(pair[0]);
+        const target = normalizeStudyName(pair[1]);
+        if (!source || !target) {
+          skipped++;
+          return;
+        }
+
+        const key = `${normalizeQuizAnswer(source)}::${normalizeQuizAnswer(target)}`;
+        if (existingKeys.has(key)) {
+          skipped++;
+          return;
+        }
+
+        existingKeys.add(key);
+        language.words.push({
+          id: `word-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          source,
+          target,
+          createdAt: new Date().toISOString(),
+          correct: 0,
+          wrong: 0
+        });
+        added++;
+      });
+
+      if (studyBulkImportInput) studyBulkImportInput.value = "";
+      currentStudyQuiz = null;
+      saveStudy();
+      renderStudy();
+      alert(`Import zakończony. Dodano: ${added}. Pominięto: ${skipped}.`);
     }
 
     function normalizeStudyName(value) {
@@ -2960,7 +3687,19 @@
     }
 
     function normalizeQuizAnswer(value) {
-      return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+      return String(value || "")
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+        .replace(/[ł]/g, "l")
+        .replace(/[ß]/g, "ss")
+        .replace(/[đð]/g, "d")
+        .replace(/[þ]/g, "th")
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .replace(/[^\p{L}\p{N}\s]/gu, "")
+        .replace(/\s+/g, " ")
+        .trim();
     }
 
     function getAcceptedStudyAnswers(value) {
@@ -2970,30 +3709,93 @@
         .filter(Boolean);
     }
 
-    function startStudyQuiz() {
+    function getStudyWordsVisible() {
+      return localStorage.getItem(studyWordsVisibleStorageKey) === "true";
+    }
+
+    function toggleStudyWordsVisibility() {
+      localStorage.setItem(studyWordsVisibleStorageKey, getStudyWordsVisible() ? "false" : "true");
+      renderStudyWordsOnly();
+    }
+
+    function ensureStudyQuizModalRoot() {
+      if (!studyQuizModal) return;
+      if (studyQuizModal.parentElement !== document.body) {
+        document.body.appendChild(studyQuizModal);
+      }
+    }
+
+    function openStudyQuizModal() {
+      if (!studyQuizModal) return;
+      ensureStudyQuizModalRoot();
+      studyModalSavedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+      studyQuizModal.classList.add("active");
+      studyQuizModal.setAttribute("aria-hidden", "false");
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+
+      if (!currentStudyQuiz) {
+        startStudyQuiz({ force: true });
+      } else {
+        renderStudyQuiz();
+      }
+    }
+
+    function closeStudyQuizModal() {
+      if (!studyQuizModal) return;
+      studyQuizModal.classList.remove("active");
+      studyQuizModal.setAttribute("aria-hidden", "true");
+      document.documentElement.style.overflow = "";
+      document.body.style.overflow = "";
+      if (Number.isFinite(studyModalSavedScrollY)) {
+        window.scrollTo(0, studyModalSavedScrollY);
+      }
+    }
+
+    function handleStudyQuizBackdropClick(event) {
+      if (event.target === studyQuizModal) closeStudyQuizModal();
+    }
+
+    function startStudyQuiz(options = {}) {
       const language = getSelectedStudyLanguage();
+      const force = Boolean(options.force);
 
       if (!language || !language.words.length) {
         alert("Dodaj przynajmniej jedno słówko w wybranej kategorii.");
         return;
       }
 
+      if (currentStudyQuiz && !currentStudyQuiz.answered && !force) {
+        if (studyQuizResult) {
+          studyQuizResult.className = "study-result wrong active";
+          studyQuizResult.textContent = "Najpierw wpisz odpowiedź i kliknij „Sprawdź”. Losowanie jest zablokowane, żeby nie podglądać kolejnych pytań bez próby.";
+        }
+        return;
+      }
+
+      clearTimeout(studyCorrectAutoNextTimer);
       const word = language.words[Math.floor(Math.random() * language.words.length)];
       const direction = Math.random() < 0.5 ? "source-to-target" : "target-to-source";
-      currentStudyQuiz = { languageId: language.id, wordId: word.id, direction };
+      currentStudyQuiz = { languageId: language.id, wordId: word.id, direction, answered: false, wrongCounted: false };
 
       if (studyQuizAnswerInput) studyQuizAnswerInput.value = "";
       renderStudyQuiz();
     }
 
-    function renderStudyQuiz() {
+    function renderStudyQuiz(options = {}) {
       if (!studyQuizPrompt || !studyQuizResult) return;
 
-      studyQuizResult.className = "study-result";
-      studyQuizResult.textContent = "";
+      const keepResult = Boolean(options.keepResult);
+      if (!keepResult) {
+        studyQuizResult.className = "study-result";
+        studyQuizResult.textContent = "";
+      }
 
       if (!currentStudyQuiz) {
         studyQuizPrompt.textContent = "Kliknij „Losuj pytanie”, a aplikacja wybierze słówko i kierunek tłumaczenia.";
+        if (studyQuizDrawButton) studyQuizDrawButton.disabled = false;
+        if (studyQuizCheckButton) studyQuizCheckButton.disabled = false;
+        if (studyQuizStatusNote) studyQuizStatusNote.textContent = "Brak aktywnego pytania.";
         return;
       }
 
@@ -3007,9 +3809,22 @@
       }
 
       const prompt = currentStudyQuiz.direction === "source-to-target" ? word.source : word.target;
-      const directionLabel = currentStudyQuiz.direction === "source-to-target" ? "pierwszy język → tłumaczenie" : "tłumaczenie → pierwszy język";
-      studyQuizPrompt.innerHTML = `Kategoria: <b>${escapeHTML(language.name)}</b> • Kierunek: <b>${directionLabel}</b><br>Przetłumacz: <b>${escapeHTML(prompt)}</b>`;
-      if (studyQuizAnswerInput) studyQuizAnswerInput.focus();
+      const directionLabel = currentStudyQuiz.direction === "source-to-target" ? "słowo → tłumaczenie" : "tłumaczenie → słowo";
+      studyQuizPrompt.innerHTML = `Kategoria: <b>${escapeHTML(language.name)}</b> • Kierunek: <b>${directionLabel}</b><span class="quiz-big-word">${escapeHTML(prompt)}</span>`;
+
+      if (studyQuizDrawButton) {
+        studyQuizDrawButton.disabled = !currentStudyQuiz.answered;
+        studyQuizDrawButton.textContent = currentStudyQuiz.answered ? "Kolejne pytanie" : "Losowanie zablokowane";
+      }
+
+      if (studyQuizCheckButton) studyQuizCheckButton.disabled = Boolean(currentStudyQuiz.answered);
+      if (studyQuizStatusNote) {
+        studyQuizStatusNote.textContent = currentStudyQuiz.answered
+          ? "Pytanie zaliczone. Możesz przejść dalej ręcznie, a po dobrej odpowiedzi aplikacja zrobi to sama."
+          : "Jeśli popełnisz błąd, musisz wpisać poprawną wersję. Losowanie pozostaje zablokowane.";
+      }
+
+      if (!currentStudyQuiz.answered && studyQuizAnswerInput) studyQuizAnswerInput.focus();
     }
 
     function checkStudyQuizAnswer() {
@@ -3017,6 +3832,8 @@
         alert("Najpierw wylosuj pytanie.");
         return;
       }
+
+      if (currentStudyQuiz.answered) return;
 
       const language = study.languages.find(item => item.id === currentStudyQuiz.languageId);
       const word = language ? language.words.find(item => item.id === currentStudyQuiz.wordId) : null;
@@ -3033,16 +3850,32 @@
       const isCorrect = typed && answers.includes(typed);
 
       if (isCorrect) {
+        currentStudyQuiz.answered = true;
         word.correct += 1;
         studyQuizResult.className = "study-result correct active";
-        studyQuizResult.innerHTML = `Dobrze. Poprawna odpowiedź: <b>${escapeHTML(expected)}</b>`;
+        studyQuizResult.innerHTML = currentStudyQuiz.wrongCounted
+          ? `Poprawione. Właściwa odpowiedź: <b>${escapeHTML(expected)}</b>. Za chwilę wylosuję następne pytanie.`
+          : `Dobrze. Poprawna odpowiedź: <b>${escapeHTML(expected)}</b>. Za chwilę wylosuję następne pytanie.`;
+        studyCorrectAutoNextTimer = setTimeout(() => {
+          if (currentStudyQuiz && currentStudyQuiz.answered && studyQuizModal && studyQuizModal.classList.contains("active")) {
+            startStudyQuiz({ force: true });
+          }
+        }, 900);
       } else {
-        word.wrong += 1;
+        if (!currentStudyQuiz.wrongCounted) {
+          word.wrong += 1;
+          currentStudyQuiz.wrongCounted = true;
+        }
         studyQuizResult.className = "study-result wrong active";
-        studyQuizResult.innerHTML = `Błąd. Poprawna wersja: <b>${escapeHTML(expected)}</b>`;
+        studyQuizResult.innerHTML = `Błąd. Poprawna wersja: <b>${escapeHTML(expected)}</b>. Wpisz teraz poprawną odpowiedź — dopiero wtedy przejdziesz dalej.`;
+        if (studyQuizAnswerInput) {
+          studyQuizAnswerInput.focus();
+          studyQuizAnswerInput.select();
+        }
       }
 
       saveStudy();
+      renderStudyQuiz({ keepResult: true });
       renderStudyWordsOnly();
     }
 
@@ -3051,13 +3884,22 @@
         event.preventDefault();
         checkStudyQuizAnswer();
       }
+
+      if (event.key === "Escape") {
+        closeStudyQuizModal();
+      }
     }
 
     function renderStudyWordsOnly() {
       if (!studyWordsList) return;
 
       const language = getSelectedStudyLanguage();
+      const visible = getStudyWordsVisible();
+      if (studyWordsToggleButton) studyWordsToggleButton.textContent = visible ? "Ukryj listę słówek" : "Pokaż listę słówek";
+      studyWordsList.classList.toggle("hidden-list", !visible);
       studyWordsList.innerHTML = "";
+
+      if (!visible) return;
 
       if (!language) {
         studyWordsList.innerHTML = `<div class="empty-box">Nie ma jeszcze kategorii nauki. Utwórz np. „Hiszpański”, a potem dodaj słówka.</div>`;
@@ -3725,30 +4567,21 @@
       renderNoteCategoryOptions();
       notesList.innerHTML = "";
 
-      if (!notes.length) {
-        notesList.innerHTML = `<div class="empty-box">Nie ma jeszcze żadnych notatek. Wpisz pierwszą, wybierz folder i kliknij „Zapisz notatkę”.</div>`;
+      const categories = getNoteCategories();
+      const folderCategories = selectedNoteCategory === "all"
+        ? categories
+        : categories.includes(selectedNoteCategory) ? [selectedNoteCategory] : [];
+
+      if (!folderCategories.length) {
+        notesList.innerHTML = `<div class="empty-box">Nie znaleziono folderów. Utwórz folder albo zapisz pierwszą notatkę.</div>`;
         return;
       }
 
-      const visibleEntries = notes
-        .map((note, index) => ({ note, index }))
-        .filter(entry => selectedNoteCategory === "all" || normalizeNoteCategory(entry.note.category) === selectedNoteCategory);
-
-      if (!visibleEntries.length) {
-        notesList.innerHTML = `<div class="empty-box">Ten folder jest pusty. Wybierz inny folder albo zapisz nową notatkę w tej kategorii.</div>`;
-        return;
-      }
-
-      const grouped = [];
-      visibleEntries.forEach(entry => {
-        const category = normalizeNoteCategory(entry.note.category);
-        let group = grouped.find(item => item.category === category);
-        if (!group) {
-          group = { category, entries: [] };
-          grouped.push(group);
-        }
-        group.entries.push(entry);
-      });
+      const allEntries = notes.map((note, index) => ({ note, index }));
+      const grouped = folderCategories.map(category => ({
+        category,
+        entries: allEntries.filter(entry => normalizeNoteCategory(entry.note.category) === category)
+      }));
 
       renderedNoteFolderCategories = grouped.map(group => group.category);
 
@@ -3766,6 +4599,7 @@
             <span class="note-folder-count">${group.entries.length} wpis${group.entries.length === 1 ? "" : group.entries.length < 5 ? "y" : "ów"}${hasPassword ? " • hasło" : ""}</span>
             ${hasPassword && !locked ? `<button class="small-btn ghost" onclick="lockRenderedNoteFolder(${groupIndex})">Zablokuj</button>` : ""}
             ${hasPassword && !locked ? `<button class="small-btn ghost" onclick="removeRenderedNoteFolderPassword(${groupIndex})">Usuń hasło</button>` : ""}
+            ${group.category !== "Ogólne" && !locked ? `<button class="small-btn danger" onclick="deleteRenderedNoteFolder(${groupIndex})">Usuń folder</button>` : ""}
           </div>
         `;
 
@@ -3785,6 +4619,8 @@
               <p class="inline-note" style="margin-bottom: 0;">To jest lokalna blokada widoku. Dane nadal są zapisane w localStorage/backupie.</p>
             </div>
           `;
+        } else if (!group.entries.length) {
+          body.innerHTML = `<div class="empty-box">Folder istnieje, ale nie ma jeszcze notatek. Wpisz notatkę wyżej i wybierz ten folder.</div>`;
         } else {
           group.entries.forEach(entry => {
             body.appendChild(buildNoteCard(entry.note, entry.index));
@@ -4556,6 +5392,50 @@
       renderHabits();
     }
 
+    function resetStudyData() {
+      if (!confirm("Reset danych: usunąć wszystkie kategorie nauki, słówka i statystyki quizu? Tej operacji nie da się cofnąć bez kopii zapasowej.")) return;
+
+      study = createDefaultStudy();
+      currentStudyQuiz = null;
+      if (studyBulkImportInput) studyBulkImportInput.value = "";
+      if (studyWordInput) studyWordInput.value = "";
+      if (studyTranslationInput) studyTranslationInput.value = "";
+      if (studyLanguageNameInput) studyLanguageNameInput.value = "";
+      saveStudy();
+      renderStudy();
+      renderDevelopment();
+    }
+
+    function resetNotesData() {
+      if (!confirm("Reset danych: usunąć wszystkie notatki, foldery i hasła folderów? Tej operacji nie da się cofnąć bez kopii zapasowej.")) return;
+
+      notes = [];
+      noteFolders = ["Ogólne"];
+      noteFolderPasswords = {};
+      unlockedNoteFolders = new Set();
+      renderedNoteFolderCategories = [];
+      selectedNoteCategory = "all";
+      openedNoteIndex = null;
+      if (noteInput) noteInput.value = "";
+      if (noteCategoryInput) noteCategoryInput.value = "";
+      if (noteFolderPasswordInput) noteFolderPasswordInput.value = "";
+      saveNotes();
+      saveNoteFolders();
+      renderNotes();
+      renderDevelopment();
+    }
+
+    function resetProfileData() {
+      if (!confirm("Reset danych: przywrócić domyślny profil użytkownika? Pomiary wagi zostaną bez zmian.")) return;
+
+      profile = createDefaultProfile();
+      saveProfileToStorage();
+      renderProfileForm();
+      renderDashboard();
+      renderWeight();
+      renderDevelopment();
+    }
+
     function renderSettingsInfo() {
       if (markersCountInfo) {
         markersCountInfo.textContent = `Aktualna liczba znaczników w Rytmie dnia: ${habits.length}`;
@@ -4986,6 +5866,8 @@
           points.push({
             label: formatShortDate(date),
             value: item ? item.weight : null,
+            date: item ? item.date : date.toISOString(),
+            dateLabel: item ? formatDate(item.date) : formatDate(date.toISOString()),
             highlight: key === todayKey
           });
         }
@@ -5014,6 +5896,8 @@
           points.push({
             label: formatShortDate(date),
             value: item ? item.weight : null,
+            date: item ? item.date : date.toISOString(),
+            dateLabel: item ? formatDate(item.date) : formatDate(date.toISOString()),
             highlight: key === todayKey
           });
         }
@@ -5038,6 +5922,8 @@
           points.push({
             label: formatMonthName(date),
             value: item ? item.weight : null,
+            date: item ? item.date : date.toISOString(),
+            dateLabel: item ? formatDate(item.date) : formatMonthName(date),
             highlight: month === now.getMonth()
           });
         }
@@ -5136,6 +6022,7 @@
 
       canvas.width = width * ratio;
       canvas.height = height * ratio;
+      weightChartHitPoints = [];
 
       ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
       ctx.clearRect(0, 0, width, height);
@@ -5149,6 +6036,7 @@
       ctx.font = "14px Arial";
 
       if (data.length === 0) {
+        weightChartHoverPoint = null;
         ctx.fillText("Brak danych dla wybranego zakresu.", 20, 40);
         return;
       }
@@ -5156,6 +6044,7 @@
       const validPoints = data.filter(item => item.value !== null);
 
       if (validPoints.length === 0) {
+        weightChartHoverPoint = null;
         ctx.fillText("Brak pomiarów w tym zakresie.", 20, 40);
         ctx.fillText("Zapisz wagę, aby pojawiła się na wykresie.", 20, 65);
         return;
@@ -5255,9 +6144,18 @@
         if (item.value !== null) {
           const pointY = y(item.value);
 
+          weightChartHitPoints.push({
+            x: pointX,
+            y: pointY,
+            index,
+            item
+          });
+
+          const isHovered = weightChartHoverPoint && weightChartHoverPoint.index === index;
+
           ctx.beginPath();
-          ctx.arc(pointX, pointY, item.highlight ? 6 : 4, 0, Math.PI * 2);
-          ctx.fillStyle = item.highlight ? "#ffffff" : "#dce8ff";
+          ctx.arc(pointX, pointY, isHovered ? 7 : item.highlight ? 6 : 4, 0, Math.PI * 2);
+          ctx.fillStyle = isHovered ? "#53d6a2" : item.highlight ? "#ffffff" : "#dce8ff";
           ctx.fill();
         }
 
@@ -5282,11 +6180,118 @@
         }
       });
 
+      if (weightChartHoverPoint) {
+        drawWeightChartTooltip(ctx, width, height, weightChartHoverPoint);
+      }
+
       if (validPoints.length === 1) {
         ctx.fillStyle = "#96a3b8";
         ctx.font = "13px Arial";
         ctx.fillText("Masz jeden pomiar w tym zakresie. Linia pojawi się po drugim pomiarze.", paddingLeft, paddingTop + 18);
       }
+    }
+
+    function drawWeightChartTooltip(ctx, width, height, point) {
+      if (!point || !point.item) return;
+
+      const dateText = point.item.dateLabel || point.item.label || "Pomiar";
+      const weightText = Number(point.item.value).toFixed(1) + " kg";
+
+      ctx.save();
+      ctx.font = "12px Arial";
+
+      const boxWidth = Math.max(ctx.measureText(dateText).width, ctx.measureText(weightText).width) + 24;
+      const boxHeight = 52;
+      let boxX = point.x - boxWidth / 2;
+      let boxY = point.y - boxHeight - 14;
+
+      if (boxX < 8) boxX = 8;
+      if (boxX + boxWidth > width - 8) boxX = width - boxWidth - 8;
+      if (boxY < 8) boxY = point.y + 14;
+      if (boxY + boxHeight > height - 8) boxY = height - boxHeight - 8;
+
+      ctx.fillStyle = "rgba(5, 7, 12, 0.94)";
+      ctx.strokeStyle = "rgba(141, 176, 255, 0.52)";
+      ctx.lineWidth = 1;
+      roundRect(ctx, boxX, boxY, boxWidth, boxHeight, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "700 13px Arial";
+      ctx.fillText(weightText, boxX + 12, boxY + 20);
+
+      ctx.fillStyle = "#96a3b8";
+      ctx.font = "12px Arial";
+      ctx.fillText(dateText, boxX + 12, boxY + 39);
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, width, height, radius) {
+      const r = Math.min(radius, width / 2, height / 2);
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + width - r, y);
+      ctx.quadraticCurveTo(x + width, y, x + width, y + r);
+      ctx.lineTo(x + width, y + height - r);
+      ctx.quadraticCurveTo(x + width, y + height, x + width - r, y + height);
+      ctx.lineTo(x + r, y + height);
+      ctx.quadraticCurveTo(x, y + height, x, y + height - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+    }
+
+    function getWeightChartPointerPosition(event) {
+      if (!weightChart) return null;
+
+      const rect = weightChart.getBoundingClientRect();
+      return {
+        x: event.clientX - rect.left,
+        y: event.clientY - rect.top
+      };
+    }
+
+    function updateWeightChartHover(event) {
+      if (!weightChart || weightChartHitPoints.length === 0) return;
+
+      const pos = getWeightChartPointerPosition(event);
+      if (!pos) return;
+
+      let closest = null;
+      let closestDistance = Infinity;
+
+      weightChartHitPoints.forEach(point => {
+        const distance = Math.hypot(pos.x - point.x, pos.y - point.y);
+
+        if (distance < closestDistance) {
+          closest = point;
+          closestDistance = distance;
+        }
+      });
+
+      const nextHover = closest && closestDistance <= 18 ? closest : null;
+      const previousIndex = weightChartHoverPoint ? weightChartHoverPoint.index : null;
+      const nextIndex = nextHover ? nextHover.index : null;
+
+      weightChart.style.cursor = nextHover ? "pointer" : "default";
+
+      if (previousIndex !== nextIndex) {
+        weightChartHoverPoint = nextHover;
+        drawWeightChart();
+      }
+    }
+
+    function clearWeightChartHover() {
+      if (!weightChartHoverPoint) return;
+
+      weightChartHoverPoint = null;
+
+      if (weightChart) {
+        weightChart.style.cursor = "default";
+      }
+
+      drawWeightChart();
     }
 
 
@@ -5298,7 +6303,7 @@
 
       return {
         app: "Habit Pixel",
-        version: 8,
+        version: 10,
         exportedAt: new Date().toISOString(),
         localUpdatedAt: localStorage.getItem(localChangeStorageKey) || new Date().toISOString(),
         year,
@@ -5602,7 +6607,7 @@
             return;
           }
 
-          setGoogleDriveStatus("Połączono z Google Drive. Możesz zapisać albo wczytać backup.");
+          setGoogleDriveStatus("Połączono z Google Drive. Autosynchronizacja może teraz zapisywać zmiany po każdej akcji.");
           resolve(googleAccessToken);
         };
 
@@ -5613,10 +6618,10 @@
     async function connectGoogleDrive() {
       try {
         await requestGoogleAccessToken("consent");
-
-        if (getDriveAutoSyncEnabled()) {
-          await syncDriveNow();
-        }
+        localStorage.setItem(driveAutoSyncStorageKey, "true");
+        updateDriveAutoSyncUi();
+        await syncDriveNow();
+        setGoogleDriveStatus("Drive połączony. Autosynchronizacja jest włączona — zmiany z przycisków będą zapisywane automatycznie po krótkiej chwili.");
       } catch (error) {
         setGoogleDriveStatus("Nie udało się połączyć z Google Drive: " + error.message);
       }
@@ -5828,11 +6833,31 @@
       });
     }
 
+    if (weightChart) {
+      weightChart.addEventListener("mousemove", updateWeightChartHover);
+      weightChart.addEventListener("mouseleave", clearWeightChartHover);
+      weightChart.addEventListener("touchstart", event => {
+        if (!event.touches || event.touches.length === 0) return;
+        updateWeightChartHover(event.touches[0]);
+      }, { passive: true });
+      weightChart.addEventListener("touchmove", event => {
+        if (!event.touches || event.touches.length === 0) return;
+        updateWeightChartHover(event.touches[0]);
+      }, { passive: true });
+      weightChart.addEventListener("touchend", clearWeightChartHover);
+    }
+
     document.addEventListener("click", event => {
       if (!weightCalendarPopup || !weightCalendarPopup.classList.contains("active")) return;
       if (weightCalendarPopup.contains(event.target) || event.target === weightDateInput) return;
 
       closeWeightCalendar();
+    });
+
+    document.addEventListener("keydown", event => {
+      if (event.key === "Escape" && studyQuizModal && studyQuizModal.classList.contains("active")) {
+        closeStudyQuizModal();
+      }
     });
 
     if (googleClientIdInput) {
