@@ -1106,6 +1106,84 @@
       background: rgba(255, 209, 102, 0.08);
     }
 
+
+    .study-form,
+    .study-quiz-box {
+      display: grid;
+      gap: 12px;
+      margin: 18px 0;
+      background: rgba(8, 11, 18, 0.94);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .study-word-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .study-word-card,
+    .locked-folder-box {
+      background: rgba(17, 24, 39, 0.74);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 12px;
+    }
+
+    .study-word-card {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .study-word-main {
+      display: grid;
+      gap: 4px;
+      color: #dde6f7;
+      line-height: 1.45;
+    }
+
+    .study-word-main b {
+      color: var(--text);
+    }
+
+    .study-result {
+      display: none;
+      padding: 12px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      line-height: 1.5;
+      font-weight: 800;
+    }
+
+    .study-result.active {
+      display: block;
+    }
+
+    .study-result.correct {
+      color: #dff7ee;
+      background: rgba(83, 214, 162, 0.10);
+      border-color: rgba(83, 214, 162, 0.36);
+    }
+
+    .study-result.wrong {
+      color: #ffe0e0;
+      background: rgba(255, 107, 107, 0.10);
+      border-color: rgba(255, 107, 107, 0.38);
+    }
+
+    .note-folder-lock {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
     footer {
       position: fixed;
       left: 0;
@@ -1123,7 +1201,7 @@
       max-width: 1050px;
       margin: auto;
       display: grid;
-      grid-template-columns: repeat(6, 1fr);
+      grid-template-columns: repeat(7, 1fr);
       gap: 8px;
     }
 
@@ -1239,6 +1317,42 @@
         grid-template-columns: 1fr;
       }
 
+
+      .grid,
+      .grid.training-grid-only {
+        grid-template-columns: repeat(53, minmax(3px, 1fr));
+        gap: 2px;
+        overflow-x: visible;
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      .day {
+        width: 100%;
+        height: auto;
+        aspect-ratio: 1 / 1;
+        min-width: 0;
+        border-radius: 2px;
+      }
+
+      .day.today {
+        outline-width: 1px;
+        outline-offset: 1px;
+      }
+
+      .study-word-card {
+        flex-direction: column;
+      }
+
+      .note-folder-head {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .note-folder-lock {
+        justify-content: flex-start;
+      }
+
       .footer-btn {
         font-size: 10px;
         padding: 9px 4px;
@@ -1329,6 +1443,102 @@
       <div class="habits-list" id="habitsList"></div>
     </section>
 
+
+    <section class="view" id="view-study">
+      <div class="section-head">
+        <div>
+          <h2 class="section-title">Nauka</h2>
+          <p class="muted">
+            Twórz własne kategorie nauki, dopisuj słówka i rób szybkie quizy w dwie strony — np. polski → hiszpański albo hiszpański → polski.
+          </p>
+        </div>
+      </div>
+
+      <div class="dashboard-grid">
+        <div class="stat-card">
+          <span class="stat-label">Kategorie</span>
+          <span class="stat-value" id="studyLanguagesStat">0</span>
+          <span class="stat-sub">języki lub osobne zestawy nauki</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-label">Słówka</span>
+          <span class="stat-value" id="studyWordsStat">0</span>
+          <span class="stat-sub">w aktualnie wybranej kategorii</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-label">Poprawne</span>
+          <span class="stat-value" id="studyCorrectStat">0</span>
+          <span class="stat-sub">trafienia zapisane w quizach</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-label">Błędy</span>
+          <span class="stat-value" id="studyWrongStat">0</span>
+          <span class="stat-sub">pomyłki z aktualnego zestawu</span>
+        </div>
+      </div>
+
+      <div class="study-form">
+        <h3 style="margin: 0;">Kategorie nauki</h3>
+        <div class="settings-grid note-category-grid">
+          <label class="field-label">
+            Wybierz kategorię / język
+            <select id="studyLanguageSelect" onchange="setStudyLanguage(this.value)"></select>
+          </label>
+
+          <label class="field-label">
+            Nowa kategoria
+            <input id="studyLanguageNameInput" placeholder="Np. Hiszpański, Angielski, Niemiecki" />
+          </label>
+        </div>
+
+        <div class="settings-row" style="margin-top: 0;">
+          <button onclick="addStudyLanguage()">Utwórz kategorię</button>
+          <button class="danger" onclick="deleteStudyLanguage()">Usuń kategorię</button>
+        </div>
+      </div>
+
+      <div class="study-form">
+        <h3 style="margin: 0;">Dodaj słówko</h3>
+        <div class="settings-grid">
+          <label class="field-label">
+            Słowo / zwrot
+            <input id="studyWordInput" placeholder="Np. casa" />
+          </label>
+
+          <label class="field-label">
+            Tłumaczenie
+            <input id="studyTranslationInput" placeholder="Np. dom" />
+          </label>
+        </div>
+
+        <div class="settings-row" style="margin-top: 0;">
+          <button onclick="addStudyWord()">Dodaj słówko</button>
+        </div>
+      </div>
+
+      <div class="study-quiz-box">
+        <h3 style="margin: 0;">Quiz losowy</h3>
+        <p class="muted" id="studyQuizPrompt" style="margin: 0;">Kliknij „Losuj pytanie”, a aplikacja wybierze słówko i kierunek tłumaczenia.</p>
+
+        <label class="field-label">
+          Twoja odpowiedź
+          <input id="studyQuizAnswerInput" placeholder="Wpisz tłumaczenie" onkeydown="handleStudyQuizKey(event)" />
+        </label>
+
+        <div class="settings-row" style="margin-top: 0;">
+          <button onclick="startStudyQuiz()">Losuj pytanie</button>
+          <button class="ghost" onclick="checkStudyQuizAnswer()">Sprawdź</button>
+        </div>
+
+        <div id="studyQuizResult" class="study-result"></div>
+      </div>
+
+      <div class="study-word-list" id="studyWordsList"></div>
+    </section>
+
     <section class="view" id="view-two">
       <div class="section-head">
         <div>
@@ -1353,6 +1563,21 @@
               <option value="all">Wszystkie foldery</option>
             </select>
           </label>
+        </div>
+
+        <div class="settings-grid note-category-grid">
+          <label class="field-label">
+            Hasło folderu opcjonalnie
+            <input id="noteFolderPasswordInput" type="password" placeholder="Ustaw hasło dla folderu z pola wyżej" />
+          </label>
+
+          <div class="field-label">
+            Folder
+            <div class="settings-row" style="margin-top: 0;">
+              <button class="ghost" onclick="createOrUpdateNoteFolder()">Utwórz / ustaw folder</button>
+              <button class="ghost" onclick="clearNoteFolderPasswordFromInput()">Usuń hasło</button>
+            </div>
+          </div>
         </div>
 
         <label class="field-label">
@@ -1645,17 +1870,17 @@
         <div class="settings-grid">
           <label class="field-label">
             Waga użytkownika [kg]
-            <input id="profileWeight" type="number" step="0.1" placeholder="Np. 90.5" />
+            <input id="profileWeight" type="number" step="0.1" placeholder="Np. 85" />
           </label>
 
           <label class="field-label">
             Wzrost [cm]
-            <input id="profileHeight" type="number" step="1" placeholder="Np. 176" />
+            <input id="profileHeight" type="number" step="1" placeholder="Np. 160" />
           </label>
 
           <label class="field-label">
             Wiek
-            <input id="profileAge" type="number" step="1" placeholder="Np. 17" />
+            <input id="profileAge" type="number" step="1" placeholder="Np. 20" />
           </label>
 
           <label class="field-label">
@@ -1688,29 +1913,6 @@
         <div class="habit-order-list" id="habitOrderList"></div>
       </div>
 
-
-      <div class="settings-box">
-        <h3>Eksport i import danych</h3>
-        <p class="muted" style="margin: 0;">
-          Skopiuj dane do pliku albo wklej je na telefonie, żeby przenieść localStorage między urządzeniami.
-        </p>
-
-        <div class="data-transfer-box">
-          <textarea id="dataTransferBox" class="transfer-textarea" placeholder="Tutaj pojawi się kopia danych albo tutaj wklejasz dane do importu."></textarea>
-
-          <div class="settings-row">
-            <button onclick="exportDataToBox()">Wygeneruj kopię danych</button>
-            <button class="ghost" onclick="copyDataBackup()">Kopiuj dane</button>
-            <button class="ghost" onclick="downloadDataBackup()">Pobierz plik JSON</button>
-            <button onclick="importDataFromBox()">Wczytaj dane z pola</button>
-          </div>
-
-          <label class="field-label">
-            Wczytaj z pliku JSON
-            <input id="dataImportFile" class="file-input" type="file" accept="application/json" onchange="importDataFromFile(event)" />
-          </label>
-        </div>
-      </div>
 
       <div class="settings-box">
         <h3>Synchronizacja Google Drive</h3>
@@ -1756,6 +1958,29 @@
           <button class="danger" onclick="resetTraining()">Usuń plan treningowy</button>
         </div>
       </div>
+      <div class="settings-box">
+        <h3>Eksport i import danych</h3>
+        <p class="muted" style="margin: 0;">
+          Skopiuj dane do pliku albo wklej je na telefonie, żeby przenieść localStorage między urządzeniami.
+        </p>
+
+        <div class="data-transfer-box">
+          <textarea id="dataTransferBox" class="transfer-textarea" placeholder="Tutaj pojawi się kopia danych albo tutaj wklejasz dane do importu."></textarea>
+
+          <div class="settings-row">
+            <button onclick="exportDataToBox()">Wygeneruj kopię danych</button>
+            <button class="ghost" onclick="copyDataBackup()">Kopiuj dane</button>
+            <button class="ghost" onclick="downloadDataBackup()">Pobierz plik JSON</button>
+            <button onclick="importDataFromBox()">Wczytaj dane z pola</button>
+          </div>
+
+          <label class="field-label">
+            Wczytaj z pliku JSON
+            <input id="dataImportFile" class="file-input" type="file" accept="application/json" onchange="importDataFromFile(event)" />
+          </label>
+        </div>
+      </div>
+
     </section>
 
   </main>
@@ -1765,6 +1990,11 @@
       <button class="footer-btn main active" id="btn-one" onclick="switchView('one')">
         <span>◼</span>
         <span>Rytm</span>
+      </button>
+
+      <button class="footer-btn" id="btn-study" onclick="switchView('study')">
+        <span>◇</span>
+        <span>Nauka</span>
       </button>
 
       <button class="footer-btn" id="btn-two" onclick="switchView('two')">
@@ -1804,6 +2034,9 @@
     const weightStorageKey = "habit-weight-data";
     const profileStorageKey = "habit-pixel-profile";
     const notesStorageKey = "habit-pixel-notes";
+    const noteFoldersStorageKey = "habit-pixel-note-folders";
+    const noteFolderPasswordStorageKey = "habit-pixel-note-folder-passwords";
+    const studyStorageKey = "habit-pixel-study";
     const trainingStorageKey = "habit-pixel-training";
 
     let selectedWeightRange = "week";
@@ -1812,7 +2045,7 @@
     let openedNoteIndex = null;
     let openedExerciseKey = null;
 
-    const oldCompletedDays = JSON.parse(localStorage.getItem(oldHabitStorageKey)) || [];
+    const oldCompletedDays = [];
 
     function createDefaultHabits() {
       return [
@@ -1852,15 +2085,34 @@
       };
     }
 
+
+
+    function createDefaultProfile() {
+      return {
+        weight: 85,
+        height: 160,
+        age: 20,
+        sex: ""
+      };
+    }
+
+    function createDefaultStudy() {
+      return {
+        selectedLanguageId: "",
+        languages: []
+      };
+    }
+
     let habits = JSON.parse(localStorage.getItem(habitsStorageKey)) || createDefaultHabits();
     let weights = JSON.parse(localStorage.getItem(weightStorageKey)) || [];
-    let profile = JSON.parse(localStorage.getItem(profileStorageKey)) || {
-      weight: "",
-      height: "",
-      age: "",
-      sex: ""
-    };
+    let profile = JSON.parse(localStorage.getItem(profileStorageKey)) || createDefaultProfile();
     let notes = JSON.parse(localStorage.getItem(notesStorageKey)) || [];
+    let noteFolders = JSON.parse(localStorage.getItem(noteFoldersStorageKey)) || ["Ogólne"];
+    let noteFolderPasswords = JSON.parse(localStorage.getItem(noteFolderPasswordStorageKey)) || {};
+    let unlockedNoteFolders = new Set();
+    let renderedNoteFolderCategories = [];
+    let study = JSON.parse(localStorage.getItem(studyStorageKey)) || createDefaultStudy();
+    let currentStudyQuiz = null;
     let training = JSON.parse(localStorage.getItem(trainingStorageKey)) || createDefaultTraining();
 
     const habitsList = document.getElementById("habitsList");
@@ -1883,7 +2135,21 @@
     const noteCategoryInput = document.getElementById("noteCategoryInput");
     const noteCategorySuggestions = document.getElementById("noteCategorySuggestions");
     const noteCategoryFilter = document.getElementById("noteCategoryFilter");
+    const noteFolderPasswordInput = document.getElementById("noteFolderPasswordInput");
     const notesList = document.getElementById("notesList");
+
+    const studyLanguagesStat = document.getElementById("studyLanguagesStat");
+    const studyWordsStat = document.getElementById("studyWordsStat");
+    const studyCorrectStat = document.getElementById("studyCorrectStat");
+    const studyWrongStat = document.getElementById("studyWrongStat");
+    const studyLanguageSelect = document.getElementById("studyLanguageSelect");
+    const studyLanguageNameInput = document.getElementById("studyLanguageNameInput");
+    const studyWordInput = document.getElementById("studyWordInput");
+    const studyTranslationInput = document.getElementById("studyTranslationInput");
+    const studyQuizPrompt = document.getElementById("studyQuizPrompt");
+    const studyQuizAnswerInput = document.getElementById("studyQuizAnswerInput");
+    const studyQuizResult = document.getElementById("studyQuizResult");
+    const studyWordsList = document.getElementById("studyWordsList");
     const developmentChart = document.getElementById("developmentChart");
     const developmentChartInfo = document.getElementById("developmentChartInfo");
     const developmentList = document.getElementById("developmentList");
@@ -2365,14 +2631,136 @@
       return clean || "Ogólne";
     }
 
-    function getNoteCategories() {
-      const categories = new Set(["Ogólne"]);
+    function normalizeNoteFolders() {
+      const folderSet = new Set(["Ogólne"]);
 
-      (Array.isArray(notes) ? notes : []).forEach(note => {
-        categories.add(normalizeNoteCategory(note.category));
+      (Array.isArray(noteFolders) ? noteFolders : []).forEach(folder => {
+        folderSet.add(normalizeNoteCategory(folder));
       });
 
-      return [...categories].sort((a, b) => a.localeCompare(b, "pl"));
+      (Array.isArray(notes) ? notes : []).forEach(note => {
+        folderSet.add(normalizeNoteCategory(note.category));
+      });
+
+      if (!noteFolderPasswords || typeof noteFolderPasswords !== "object" || Array.isArray(noteFolderPasswords)) {
+        noteFolderPasswords = {};
+      }
+
+      const normalizedPasswords = {};
+      Object.entries(noteFolderPasswords).forEach(([folder, password]) => {
+        const category = normalizeNoteCategory(folder);
+        const savedPassword = String(password || "");
+        if (savedPassword) {
+          folderSet.add(category);
+          normalizedPasswords[category] = savedPassword;
+        }
+      });
+
+      noteFolders = [...folderSet].sort((a, b) => a.localeCompare(b, "pl"));
+      noteFolderPasswords = normalizedPasswords;
+    }
+
+    function saveNoteFolders() {
+      normalizeNoteFolders();
+      localStorage.setItem(noteFoldersStorageKey, JSON.stringify(noteFolders));
+      localStorage.setItem(noteFolderPasswordStorageKey, JSON.stringify(noteFolderPasswords));
+      markLocalDataChanged();
+    }
+
+    function getNoteCategories() {
+      normalizeNoteFolders();
+      return [...noteFolders];
+    }
+
+    function encodeFolderPassword(value) {
+      try {
+        return btoa(unescape(encodeURIComponent(String(value || ""))));
+      } catch (error) {
+        return String(value || "");
+      }
+    }
+
+    function ensureNoteFolder(category, password = "") {
+      const normalized = normalizeNoteCategory(category);
+      normalizeNoteFolders();
+
+      if (!noteFolders.includes(normalized)) {
+        noteFolders.push(normalized);
+      }
+
+      const cleanPassword = String(password || "").trim();
+      if (cleanPassword) {
+        noteFolderPasswords[normalized] = encodeFolderPassword(cleanPassword);
+        unlockedNoteFolders.add(normalized);
+      }
+
+      saveNoteFolders();
+      return normalized;
+    }
+
+    function createOrUpdateNoteFolder() {
+      if (!noteCategoryInput) return;
+
+      const category = ensureNoteFolder(noteCategoryInput.value, noteFolderPasswordInput ? noteFolderPasswordInput.value : "");
+      selectedNoteCategory = category;
+      noteCategoryInput.value = category;
+      if (noteFolderPasswordInput) noteFolderPasswordInput.value = "";
+      renderNoteCategoryOptions();
+      renderNotes();
+      alert(`Folder "${category}" został zapisany${noteFolderPasswords[category] ? " z hasłem." : "."}`);
+    }
+
+    function clearNoteFolderPasswordFromInput() {
+      if (!noteCategoryInput) return;
+      const category = normalizeNoteCategory(noteCategoryInput.value);
+
+      if (!noteFolderPasswords[category]) {
+        alert("Ten folder nie ma ustawionego hasła.");
+        return;
+      }
+
+      if (!confirm(`Usunąć hasło z folderu "${category}"?`)) return;
+      delete noteFolderPasswords[category];
+      unlockedNoteFolders.delete(category);
+      saveNoteFolders();
+      renderNotes();
+    }
+
+    function isNoteFolderLocked(category) {
+      const normalized = normalizeNoteCategory(category);
+      return Boolean(noteFolderPasswords[normalized]) && !unlockedNoteFolders.has(normalized);
+    }
+
+    function unlockRenderedNoteFolder(groupIndex) {
+      const category = renderedNoteFolderCategories[groupIndex];
+      if (!category) return;
+
+      const input = document.getElementById(`note-unlock-${groupIndex}`);
+      const typed = input ? input.value : "";
+
+      if (noteFolderPasswords[category] === encodeFolderPassword(typed)) {
+        unlockedNoteFolders.add(category);
+        renderNotes();
+      } else {
+        alert("Niepoprawne hasło folderu.");
+      }
+    }
+
+    function lockRenderedNoteFolder(groupIndex) {
+      const category = renderedNoteFolderCategories[groupIndex];
+      if (!category) return;
+      unlockedNoteFolders.delete(category);
+      renderNotes();
+    }
+
+    function removeRenderedNoteFolderPassword(groupIndex) {
+      const category = renderedNoteFolderCategories[groupIndex];
+      if (!category || !noteFolderPasswords[category]) return;
+      if (!confirm(`Usunąć hasło z folderu "${category}"?`)) return;
+      delete noteFolderPasswords[category];
+      unlockedNoteFolders.delete(category);
+      saveNoteFolders();
+      renderNotes();
     }
 
     function renderNoteCategoryOptions() {
@@ -2388,7 +2776,7 @@
         const current = selectedNoteCategory || "all";
         noteCategoryFilter.innerHTML = `
           <option value="all">Wszystkie foldery</option>
-          ${categories.map(category => `<option value="${escapeHTML(category)}">${escapeHTML(category)}</option>`).join("")}
+          ${categories.map(category => `<option value="${escapeHTML(category)}">${escapeHTML(category)}${noteFolderPasswords[category] ? " 🔒" : ""}</option>`).join("")}
         `;
 
         if (current !== "all" && !categories.includes(current)) {
@@ -2423,8 +2811,302 @@
           return new Date(b.date) - new Date(a.date);
         });
 
+      normalizeNoteFolders();
       localStorage.setItem(notesStorageKey, JSON.stringify(notes));
+      localStorage.setItem(noteFoldersStorageKey, JSON.stringify(noteFolders));
+      localStorage.setItem(noteFolderPasswordStorageKey, JSON.stringify(noteFolderPasswords));
       markLocalDataChanged();
+    }
+
+    function normalizeStudyName(value) {
+      return String(value || "").trim().replace(/\s+/g, " ");
+    }
+
+    function normalizeStudy() {
+      if (!study || typeof study !== "object" || Array.isArray(study)) {
+        study = createDefaultStudy();
+      }
+
+      study.languages = (Array.isArray(study.languages) ? study.languages : [])
+        .map((language, index) => ({
+          id: language.id || `study-${Date.now()}-${index}`,
+          name: normalizeStudyName(language.name) || `Kategoria ${index + 1}`,
+          words: (Array.isArray(language.words) ? language.words : [])
+            .filter(word => word && normalizeStudyName(word.source) && normalizeStudyName(word.target))
+            .map((word, wordIndex) => ({
+              id: word.id || `word-${Date.now()}-${wordIndex}`,
+              source: normalizeStudyName(word.source),
+              target: normalizeStudyName(word.target),
+              createdAt: word.createdAt || new Date().toISOString(),
+              correct: Number(word.correct) > 0 ? Number(word.correct) : 0,
+              wrong: Number(word.wrong) > 0 ? Number(word.wrong) : 0
+            }))
+        }));
+
+      if (!study.languages.some(language => language.id === study.selectedLanguageId)) {
+        study.selectedLanguageId = study.languages[0] ? study.languages[0].id : "";
+      }
+    }
+
+    function saveStudy() {
+      normalizeStudy();
+      localStorage.setItem(studyStorageKey, JSON.stringify(study));
+      markLocalDataChanged();
+    }
+
+    function getSelectedStudyLanguage() {
+      normalizeStudy();
+      return study.languages.find(language => language.id === study.selectedLanguageId) || null;
+    }
+
+    function setStudyLanguage(languageId) {
+      study.selectedLanguageId = languageId || "";
+      currentStudyQuiz = null;
+      saveStudy();
+      renderStudy();
+    }
+
+    function addStudyLanguage() {
+      const name = normalizeStudyName(studyLanguageNameInput ? studyLanguageNameInput.value : "");
+
+      if (!name) {
+        alert("Wpisz nazwę kategorii, np. Hiszpański.");
+        return;
+      }
+
+      normalizeStudy();
+      const existing = study.languages.find(language => language.name.toLowerCase() === name.toLowerCase());
+
+      if (existing) {
+        study.selectedLanguageId = existing.id;
+      } else {
+        const language = {
+          id: `study-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+          name,
+          words: []
+        };
+        study.languages.push(language);
+        study.selectedLanguageId = language.id;
+      }
+
+      if (studyLanguageNameInput) studyLanguageNameInput.value = "";
+      currentStudyQuiz = null;
+      saveStudy();
+      renderStudy();
+    }
+
+    function deleteStudyLanguage() {
+      normalizeStudy();
+      const language = getSelectedStudyLanguage();
+
+      if (!language) {
+        alert("Nie ma kategorii do usunięcia.");
+        return;
+      }
+
+      if (!confirm(`Usunąć kategorię "${language.name}" razem ze wszystkimi słówkami?`)) return;
+      study.languages = study.languages.filter(item => item.id !== language.id);
+      study.selectedLanguageId = study.languages[0] ? study.languages[0].id : "";
+      currentStudyQuiz = null;
+      saveStudy();
+      renderStudy();
+    }
+
+    function addStudyWord() {
+      let language = getSelectedStudyLanguage();
+
+      if (!language && studyLanguageNameInput && studyLanguageNameInput.value.trim()) {
+        addStudyLanguage();
+        language = getSelectedStudyLanguage();
+      }
+
+      if (!language) {
+        alert("Najpierw utwórz kategorię nauki, np. Hiszpański.");
+        return;
+      }
+
+      const source = normalizeStudyName(studyWordInput ? studyWordInput.value : "");
+      const target = normalizeStudyName(studyTranslationInput ? studyTranslationInput.value : "");
+
+      if (!source || !target) {
+        alert("Wpisz słowo i tłumaczenie.");
+        return;
+      }
+
+      language.words.push({
+        id: `word-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        source,
+        target,
+        createdAt: new Date().toISOString(),
+        correct: 0,
+        wrong: 0
+      });
+
+      if (studyWordInput) studyWordInput.value = "";
+      if (studyTranslationInput) studyTranslationInput.value = "";
+      saveStudy();
+      renderStudy();
+    }
+
+    function deleteStudyWord(wordIndex) {
+      const language = getSelectedStudyLanguage();
+      if (!language || !language.words[wordIndex]) return;
+
+      if (!confirm("Usunąć to słówko?")) return;
+      language.words.splice(wordIndex, 1);
+      currentStudyQuiz = null;
+      saveStudy();
+      renderStudy();
+    }
+
+    function normalizeQuizAnswer(value) {
+      return String(value || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    function getAcceptedStudyAnswers(value) {
+      return String(value || "")
+        .split(/[;,/|]/)
+        .map(item => normalizeQuizAnswer(item))
+        .filter(Boolean);
+    }
+
+    function startStudyQuiz() {
+      const language = getSelectedStudyLanguage();
+
+      if (!language || !language.words.length) {
+        alert("Dodaj przynajmniej jedno słówko w wybranej kategorii.");
+        return;
+      }
+
+      const word = language.words[Math.floor(Math.random() * language.words.length)];
+      const direction = Math.random() < 0.5 ? "source-to-target" : "target-to-source";
+      currentStudyQuiz = { languageId: language.id, wordId: word.id, direction };
+
+      if (studyQuizAnswerInput) studyQuizAnswerInput.value = "";
+      renderStudyQuiz();
+    }
+
+    function renderStudyQuiz() {
+      if (!studyQuizPrompt || !studyQuizResult) return;
+
+      studyQuizResult.className = "study-result";
+      studyQuizResult.textContent = "";
+
+      if (!currentStudyQuiz) {
+        studyQuizPrompt.textContent = "Kliknij „Losuj pytanie”, a aplikacja wybierze słówko i kierunek tłumaczenia.";
+        return;
+      }
+
+      const language = study.languages.find(item => item.id === currentStudyQuiz.languageId);
+      const word = language ? language.words.find(item => item.id === currentStudyQuiz.wordId) : null;
+
+      if (!language || !word) {
+        currentStudyQuiz = null;
+        renderStudyQuiz();
+        return;
+      }
+
+      const prompt = currentStudyQuiz.direction === "source-to-target" ? word.source : word.target;
+      const directionLabel = currentStudyQuiz.direction === "source-to-target" ? "pierwszy język → tłumaczenie" : "tłumaczenie → pierwszy język";
+      studyQuizPrompt.innerHTML = `Kategoria: <b>${escapeHTML(language.name)}</b> • Kierunek: <b>${directionLabel}</b><br>Przetłumacz: <b>${escapeHTML(prompt)}</b>`;
+      if (studyQuizAnswerInput) studyQuizAnswerInput.focus();
+    }
+
+    function checkStudyQuizAnswer() {
+      if (!currentStudyQuiz) {
+        alert("Najpierw wylosuj pytanie.");
+        return;
+      }
+
+      const language = study.languages.find(item => item.id === currentStudyQuiz.languageId);
+      const word = language ? language.words.find(item => item.id === currentStudyQuiz.wordId) : null;
+
+      if (!language || !word) {
+        currentStudyQuiz = null;
+        renderStudyQuiz();
+        return;
+      }
+
+      const expected = currentStudyQuiz.direction === "source-to-target" ? word.target : word.source;
+      const answers = getAcceptedStudyAnswers(expected);
+      const typed = normalizeQuizAnswer(studyQuizAnswerInput ? studyQuizAnswerInput.value : "");
+      const isCorrect = typed && answers.includes(typed);
+
+      if (isCorrect) {
+        word.correct += 1;
+        studyQuizResult.className = "study-result correct active";
+        studyQuizResult.innerHTML = `Dobrze. Poprawna odpowiedź: <b>${escapeHTML(expected)}</b>`;
+      } else {
+        word.wrong += 1;
+        studyQuizResult.className = "study-result wrong active";
+        studyQuizResult.innerHTML = `Błąd. Poprawna wersja: <b>${escapeHTML(expected)}</b>`;
+      }
+
+      saveStudy();
+      renderStudyWordsOnly();
+    }
+
+    function handleStudyQuizKey(event) {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        checkStudyQuizAnswer();
+      }
+    }
+
+    function renderStudyWordsOnly() {
+      if (!studyWordsList) return;
+
+      const language = getSelectedStudyLanguage();
+      studyWordsList.innerHTML = "";
+
+      if (!language) {
+        studyWordsList.innerHTML = `<div class="empty-box">Nie ma jeszcze kategorii nauki. Utwórz np. „Hiszpański”, a potem dodaj słówka.</div>`;
+        return;
+      }
+
+      if (!language.words.length) {
+        studyWordsList.innerHTML = `<div class="empty-box">Ta kategoria nie ma jeszcze słówek. Dodaj pierwszą parę: słowo + tłumaczenie.</div>`;
+        return;
+      }
+
+      language.words.forEach((word, index) => {
+        const card = document.createElement("div");
+        card.className = "study-word-card";
+        card.innerHTML = `
+          <div class="study-word-main">
+            <div><b>${escapeHTML(word.source)}</b> ⇄ <b>${escapeHTML(word.target)}</b></div>
+            <div class="inline-note">Poprawne: ${Number(word.correct || 0)} • Błędy: ${Number(word.wrong || 0)}</div>
+          </div>
+          <div class="note-actions">
+            <button class="small-btn danger" onclick="deleteStudyWord(${index})">Usuń</button>
+          </div>
+        `;
+        studyWordsList.appendChild(card);
+      });
+    }
+
+    function renderStudy() {
+      normalizeStudy();
+
+      const language = getSelectedStudyLanguage();
+      const selectedWords = language ? language.words : [];
+      const correct = selectedWords.reduce((sum, word) => sum + Number(word.correct || 0), 0);
+      const wrong = selectedWords.reduce((sum, word) => sum + Number(word.wrong || 0), 0);
+
+      if (studyLanguagesStat) studyLanguagesStat.textContent = String(study.languages.length);
+      if (studyWordsStat) studyWordsStat.textContent = String(selectedWords.length);
+      if (studyCorrectStat) studyCorrectStat.textContent = String(correct);
+      if (studyWrongStat) studyWrongStat.textContent = String(wrong);
+
+      if (studyLanguageSelect) {
+        studyLanguageSelect.innerHTML = study.languages.length
+          ? study.languages.map(item => `<option value="${escapeHTML(item.id)}">${escapeHTML(item.name)}</option>`).join("")
+          : `<option value="">Brak kategorii</option>`;
+        studyLanguageSelect.value = study.selectedLanguageId || "";
+      }
+
+      renderStudyQuiz();
+      renderStudyWordsOnly();
     }
 
     function uniqueCompleted(habit) {
@@ -2968,7 +3650,7 @@
       if (!noteInput) return;
 
       const text = noteInput.value.trim();
-      const category = normalizeNoteCategory(noteCategoryInput ? noteCategoryInput.value : "");
+      const category = ensureNoteFolder(noteCategoryInput ? noteCategoryInput.value : "", noteFolderPasswordInput ? noteFolderPasswordInput.value : "");
 
       if (!text) {
         alert("Wpisz treść notatki.");
@@ -2986,6 +3668,7 @@
 
       noteInput.value = "";
       if (noteCategoryInput) noteCategoryInput.value = category;
+      if (noteFolderPasswordInput) noteFolderPasswordInput.value = "";
       selectedNoteCategory = category;
       saveNotes();
       renderNotes();
@@ -3003,7 +3686,6 @@
           <div>
             <div class="note-date">${note.pinned ? "📌 Przypięta • " : ""}${formatDate(note.date)}</div>
             <div class="inline-note">${note.updatedAt && note.updatedAt !== note.date ? "Edytowano: " + formatDate(note.updatedAt) : "Wpis zapisany w tym dniu"}</div>
-            <div class="note-category-pill">Folder: ${escapeHTML(category)}</div>
           </div>
 
           <div class="note-actions">
@@ -3068,23 +3750,46 @@
         group.entries.push(entry);
       });
 
-      grouped.forEach(group => {
+      renderedNoteFolderCategories = grouped.map(group => group.category);
+
+      grouped.forEach((group, groupIndex) => {
         const folder = document.createElement("div");
         folder.className = "note-folder";
+        const hasPassword = Boolean(noteFolderPasswords[group.category]);
+        const locked = isNoteFolderLocked(group.category);
 
         const head = document.createElement("div");
         head.className = "note-folder-head";
         head.innerHTML = `
-          <div class="note-folder-title">📁 ${escapeHTML(group.category)}</div>
-          <div class="note-folder-count">${group.entries.length} wpis${group.entries.length === 1 ? "" : group.entries.length < 5 ? "y" : "ów"}</div>
+          <div class="note-folder-title">${locked ? "🔒" : "📁"} ${escapeHTML(group.category)}</div>
+          <div class="note-folder-lock">
+            <span class="note-folder-count">${group.entries.length} wpis${group.entries.length === 1 ? "" : group.entries.length < 5 ? "y" : "ów"}${hasPassword ? " • hasło" : ""}</span>
+            ${hasPassword && !locked ? `<button class="small-btn ghost" onclick="lockRenderedNoteFolder(${groupIndex})">Zablokuj</button>` : ""}
+            ${hasPassword && !locked ? `<button class="small-btn ghost" onclick="removeRenderedNoteFolderPassword(${groupIndex})">Usuń hasło</button>` : ""}
+          </div>
         `;
 
         const body = document.createElement("div");
         body.className = "note-folder-body";
 
-        group.entries.forEach(entry => {
-          body.appendChild(buildNoteCard(entry.note, entry.index));
-        });
+        if (locked) {
+          body.innerHTML = `
+            <div class="locked-folder-box">
+              <label class="field-label">
+                Hasło do folderu
+                <input id="note-unlock-${groupIndex}" type="password" placeholder="Wpisz hasło, żeby pokazać notatki" onkeydown="if(event.key === 'Enter'){unlockRenderedNoteFolder(${groupIndex})}" />
+              </label>
+              <div class="settings-row">
+                <button class="ghost" onclick="unlockRenderedNoteFolder(${groupIndex})">Odblokuj folder</button>
+              </div>
+              <p class="inline-note" style="margin-bottom: 0;">To jest lokalna blokada widoku. Dane nadal są zapisane w localStorage/backupie.</p>
+            </div>
+          `;
+        } else {
+          group.entries.forEach(entry => {
+            body.appendChild(buildNoteCard(entry.note, entry.index));
+          });
+        }
 
         folder.appendChild(head);
         folder.appendChild(body);
@@ -3117,7 +3822,7 @@
       }
 
       notes[index].text = text;
-      notes[index].category = normalizeNoteCategory(categoryInput ? categoryInput.value : notes[index].category);
+      notes[index].category = ensureNoteFolder(categoryInput ? categoryInput.value : notes[index].category);
       notes[index].updatedAt = new Date().toISOString();
       selectedNoteCategory = notes[index].category;
       openedNoteIndex = null;
@@ -3985,6 +4690,11 @@
         renderHabits();
       }
 
+      if (viewName === "study") {
+        headerSubtitle.textContent = "Nauka • słówka i quizy";
+        renderStudy();
+      }
+
       if (viewName === "two") {
         headerSubtitle.textContent = "Notatki • foldery i wpisy";
         renderNotes();
@@ -4582,6 +5292,8 @@
 
     function getBackupData() {
       normalizeHabits();
+      normalizeNoteFolders();
+      normalizeStudy();
       normalizeTraining();
 
       return {
@@ -4595,6 +5307,9 @@
           weights,
           profile,
           notes,
+          noteFolders,
+          noteFolderPasswords,
+          study,
           training
         }
       };
@@ -4658,13 +5373,19 @@
         if (Array.isArray(data.weights)) weights = data.weights;
         if (data.profile && typeof data.profile === "object") profile = data.profile;
         if (Array.isArray(data.notes)) notes = data.notes;
+        if (Array.isArray(data.noteFolders)) noteFolders = data.noteFolders;
+        if (data.noteFolderPasswords && typeof data.noteFolderPasswords === "object") noteFolderPasswords = data.noteFolderPasswords;
+        if (data.study && typeof data.study === "object") study = data.study;
         if (data.training && typeof data.training === "object") training = data.training;
 
         normalizeHabits();
+        normalizeNoteFolders();
+        normalizeStudy();
         normalizeTraining();
         saveHabits();
         saveWeights();
         saveNotes();
+        saveStudy();
         saveTraining();
         syncProfileWeightFromLatest();
 
@@ -4677,9 +5398,12 @@
       openedEditIndex = null;
       openedNoteIndex = null;
       openedExerciseKey = null;
+      currentStudyQuiz = null;
+      unlockedNoteFolders = new Set();
 
       renderHabits();
       renderNotes();
+      renderStudy();
       renderTraining();
       renderWeight();
       renderSettingsInfo();
@@ -5059,7 +5783,9 @@
       if (!confirm("Reset danych: usunąć wszystkie pomiary wagi? Tej operacji nie da się cofnąć bez kopii zapasowej.")) return;
 
       weights = [];
+      profile = createDefaultProfile();
       saveWeights();
+      saveProfileToStorage();
       renderWeight();
       renderDashboard();
       renderSettingsInfo();
@@ -5116,15 +5842,19 @@
     updateDriveAutoSyncUi();
 
     normalizeHabits();
+    normalizeNoteFolders();
+    normalizeStudy();
     normalizeTraining();
     saveHabits();
     saveWeights();
     saveNotes();
+    saveStudy();
     saveTraining();
     syncProfileWeightFromLatest();
     setWeightDateNow();
     renderHabits();
     renderNotes();
+    renderStudy();
     renderTraining();
     renderWeight();
     renderSettingsInfo();
