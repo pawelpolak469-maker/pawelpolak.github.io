@@ -928,6 +928,11 @@
       line-height: 1.2;
     }
 
+    #noteFolderPasswordInput:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
     .button-link {
       display: inline-flex;
       align-items: center;
@@ -2183,7 +2188,7 @@ libro = książka"></textarea>
         <div class="settings-grid note-category-grid">
           <label class="field-label">
             Folder / kategoria
-            <input id="noteCategoryInput" list="noteCategorySuggestions" placeholder="Np. Ogólne, Prywatne, Trening, Osoby" />
+            <input id="noteCategoryInput" list="noteCategorySuggestions" placeholder="Np. Ogólne, Prywatne, Trening, Osoby" oninput="updateNotePasswordInputState()" onchange="updateNotePasswordInputState()" />
             <datalist id="noteCategorySuggestions"></datalist>
           </label>
 
@@ -2571,9 +2576,9 @@ libro = książka"></textarea>
           <div class="settings-row">
             <button class="ghost" onclick="saveGoogleClientId()">Zapisz Client ID</button>
             <button onclick="connectGoogleDrive()">Połącz z Google Drive</button>
-            <button class="ghost" onclick="syncDriveNow()">Synchronizuj teraz</button>
-            <button class="ghost" onclick="saveBackupToDrive()">Zapisz dane do Drive</button>
             <button class="ghost" onclick="loadBackupFromDrive()">Wczytaj dane z Drive</button>
+            <button class="ghost" onclick="syncDriveNow({ manual: true })">Bezpiecznie synchronizuj</button>
+            <button class="danger" onclick="saveBackupToDrive({ manual: true, forcePrompt: true })">Awaryjnie nadpisz Drive</button>
           </div>
 
           <div class="settings-row" style="margin-top: 0;">
@@ -2583,6 +2588,9 @@ libro = książka"></textarea>
           <p class="info" id="googleDriveStatus" style="margin: 0;">Drive niepołączony. Najpierw wklej Client ID i kliknij „Połącz z Google Drive”.</p>
           <p class="inline-note" id="driveAutoSyncInfo" style="margin: 0;">
             Autosynchronizacja: wyłączona. Po włączeniu strona po połączeniu z Drive będzie wczytywać nowszy save i zapisywać zmiany po krótkiej chwili.
+          </p>
+          <p class="inline-note" style="margin: 0;">
+            Najbezpieczniej używać „Wczytaj dane z Drive” albo „Bezpiecznie synchronizuj”. Przycisk „Awaryjnie nadpisz Drive” jest celowo czerwony, bo może zastąpić dobry backup pustymi albo niepełnymi danymi z tego urządzenia.
           </p>
           <p class="inline-note" style="margin: 0;">
             Plik backupu jest zapisywany jako <b>habit_pixel_backup.json</b> w ukrytym folderze aplikacji Google Drive, nie jako zwykły widoczny dokument na głównym Dysku.
@@ -3341,34 +3349,75 @@ libro = książka"></textarea>
       }
     }
 
+    function noteFolderExists(category) {
+      const normalized = normalizeNoteCategory(category);
+      normalizeNoteFolders();
+      return noteFolders.some(folder => normalizeNoteCategory(folder).toLowerCase() === normalized.toLowerCase());
+    }
+
+    function getExistingNoteFolderName(category) {
+      const normalized = normalizeNoteCategory(category);
+      normalizeNoteFolders();
+      return noteFolders.find(folder => normalizeNoteCategory(folder).toLowerCase() === normalized.toLowerCase()) || normalized;
+    }
+
+    function updateNotePasswordInputState() {
+      if (!noteCategoryInput || !noteFolderPasswordInput) return;
+
+      const typed = normalizeNoteCategory(noteCategoryInput.value);
+      const existingName = getExistingNoteFolderName(typed);
+      const exists = noteFolderExists(typed);
+      const shouldDisable = exists && typed !== "Ogólne";
+
+      noteFolderPasswordInput.disabled = shouldDisable;
+      noteFolderPasswordInput.placeholder = shouldDisable
+        ? `Folder "${existingName}" już istnieje — hasła nie da się nadpisać tym polem`
+        : "Ustaw hasło tylko przy tworzeniu nowego folderu";
+
+      if (shouldDisable) noteFolderPasswordInput.value = "";
+    }
+
     function ensureNoteFolder(category, password = "") {
       const normalized = normalizeNoteCategory(category);
       normalizeNoteFolders();
 
-      if (!noteFolders.includes(normalized)) {
+      const existingName = getExistingNoteFolderName(normalized);
+      const exists = noteFolderExists(normalized);
+      const cleanPassword = String(password || "").trim();
+
+      if (!exists) {
         noteFolders.push(normalized);
+        if (cleanPassword) {
+          noteFolderPasswords[normalized] = encodeFolderPassword(cleanPassword);
+          unlockedNoteFolders.add(normalized);
+        }
+        saveNoteFolders();
+        return normalized;
       }
 
-      const cleanPassword = String(password || "").trim();
       if (cleanPassword) {
-        noteFolderPasswords[normalized] = encodeFolderPassword(cleanPassword);
-        unlockedNoteFolders.add(normalized);
+        alert(`Folder "${existingName}" już istnieje. Hasło nie zostało zmienione, żeby nie dało się go nadpisać bez znajomości starego hasła.`);
       }
 
       saveNoteFolders();
-      return normalized;
+      return existingName;
     }
 
     function createOrUpdateNoteFolder() {
       if (!noteCategoryInput) return;
 
-      const category = ensureNoteFolder(noteCategoryInput.value, noteFolderPasswordInput ? noteFolderPasswordInput.value : "");
+      const rawCategory = noteCategoryInput.value;
+      const existedBefore = noteFolderExists(rawCategory);
+      const category = ensureNoteFolder(rawCategory, existedBefore ? "" : (noteFolderPasswordInput ? noteFolderPasswordInput.value : ""));
       selectedNoteCategory = category;
       noteCategoryInput.value = category;
       if (noteFolderPasswordInput) noteFolderPasswordInput.value = "";
       renderNoteCategoryOptions();
+      updateNotePasswordInputState();
       renderNotes();
-      alert(`Folder "${category}" został zapisany${noteFolderPasswords[category] ? " z hasłem." : "."}`);
+      alert(existedBefore
+        ? `Folder "${category}" już istniał. Nie zmieniono jego hasła.`
+        : `Folder "${category}" został utworzony${noteFolderPasswords[category] ? " z hasłem." : "."}`);
     }
 
     function clearNoteFolderPasswordFromInput() {
@@ -3497,6 +3546,8 @@ libro = książka"></textarea>
 
         noteCategoryFilter.value = selectedNoteCategory;
       }
+
+      updateNotePasswordInputState();
     }
 
     function setNoteCategoryFilter(value) {
@@ -4573,6 +4624,7 @@ libro = książka"></textarea>
       noteInput.value = "";
       if (noteCategoryInput) noteCategoryInput.value = category;
       if (noteFolderPasswordInput) noteFolderPasswordInput.value = "";
+      updateNotePasswordInputState();
       selectedNoteCategory = category;
       saveNotes();
       renderNotes();
@@ -6511,6 +6563,66 @@ libro = książka"></textarea>
       reader.readAsText(file);
     }
 
+    function getBackupStatsFromPayload(payload) {
+      const data = payload && payload.data ? payload.data : (payload || {});
+      const sourceHabits = Array.isArray(data.habits) ? data.habits : [];
+      const sourceWeights = Array.isArray(data.weights) ? data.weights : [];
+      const sourceNotes = Array.isArray(data.notes) ? data.notes : [];
+      const sourceStudy = data.study && typeof data.study === "object" ? data.study : { languages: [] };
+      const sourceTraining = data.training && typeof data.training === "object" ? data.training : { days: [] };
+
+      const habitDone = sourceHabits.reduce((sum, habit) => sum + (Array.isArray(habit.completed) ? habit.completed.length : 0), 0);
+      const studyWords = (Array.isArray(sourceStudy.languages) ? sourceStudy.languages : [])
+        .reduce((sum, language) => sum + (Array.isArray(language.words) ? language.words.length : 0), 0);
+      const trainingExercises = (Array.isArray(sourceTraining.days) ? sourceTraining.days : [])
+        .reduce((sum, day) => sum + (Array.isArray(day.exercises) ? day.exercises.length : 0), 0);
+      const trainingDone = (Array.isArray(sourceTraining.days) ? sourceTraining.days : [])
+        .reduce((sum, day) => sum + (Array.isArray(day.exercises)
+          ? day.exercises.reduce((inner, exercise) => inner + (Array.isArray(exercise.completed) ? exercise.completed.length : 0), 0)
+          : 0), 0);
+
+      const meaningfulTotal = habitDone + sourceWeights.length + sourceNotes.length + studyWords + trainingExercises + trainingDone;
+
+      return {
+        habitDone,
+        weights: sourceWeights.length,
+        notes: sourceNotes.length,
+        studyWords,
+        trainingExercises,
+        trainingDone,
+        meaningfulTotal
+      };
+    }
+
+    function getLocalBackupStats() {
+      return getBackupStatsFromPayload(getBackupData());
+    }
+
+    function formatBackupStats(stats) {
+      return `waga: ${stats.weights}, notatki: ${stats.notes}, słówka: ${stats.studyWords}, ćwiczenia: ${stats.trainingExercises}, odznaczenia: ${stats.habitDone + stats.trainingDone}`;
+    }
+
+    function hasDriveBaseline() {
+      return Boolean(localStorage.getItem(driveLastSaveStorageKey));
+    }
+
+    function confirmManualDriveOverwrite(existingFile, remoteStats = null) {
+      const localStats = getLocalBackupStats();
+      const remoteInfo = remoteStats ? "\nDane aktualnie w Drive: " + formatBackupStats(remoteStats) : "";
+      const fileInfo = existingFile
+        ? `\nIstniejący backup Drive: ${formatDate(existingFile.modifiedTime || new Date().toISOString())}`
+        : "\nW Drive nie znaleziono jeszcze backupu — zostanie utworzony nowy plik.";
+
+      return confirm(
+        "UWAGA: ten przycisk NADPISUJE backup w Google Drive danymi z tego urządzenia." +
+        "\nJeśli ta strona nie wczytała jeszcze danych z Drive albo jest prawie pusta, możesz skasować dobry backup pustymi danymi." +
+        fileInfo +
+        remoteInfo +
+        "\nDane lokalne: " + formatBackupStats(localStats) +
+        "\n\nKontynuować awaryjny zapis do Drive?"
+      );
+    }
+
     function getDriveAutoSyncEnabled() {
       return localStorage.getItem(driveAutoSyncStorageKey) === "true";
     }
@@ -6603,9 +6715,7 @@ libro = książka"></textarea>
         return;
       }
 
-      if (hasUnsyncedLocalChanges()) {
-        await saveBackupToDrive({ auto: true, periodic: true });
-      }
+      await syncDriveNow({ auto: true });
     }
 
     function startDriveAutoSyncLoop() {
@@ -6823,6 +6933,7 @@ libro = książka"></textarea>
 
     async function saveBackupToDrive(options = {}) {
       const isAuto = Boolean(options.auto);
+      const isManual = Boolean(options.manual) || !isAuto;
 
       if (driveSyncInProgress) {
         if (!isAuto) setGoogleDriveStatus("Drive jest już w trakcie zapisu. Poczekaj chwilę i spróbuj ponownie.");
@@ -6846,11 +6957,38 @@ libro = książka"></textarea>
           }
         }
 
-        const jsonText = JSON.stringify(getBackupData(), null, 2);
-        updateDriveHeaderStatus("syncing", "Zapis", "Trwa zapis danych do Google Drive.");
-        setGoogleDriveStatus(isAuto ? "Autosynchronizacja: zapisywanie zmian do Google Drive..." : "Łączenie z Google Drive i szukanie pliku backupu...");
+        updateDriveHeaderStatus("syncing", "Sprawdza", "Sprawdzanie backupu w Google Drive przed zapisem.");
+        setGoogleDriveStatus(isAuto ? "Autosynchronizacja: sprawdzanie, czy zapis do Drive jest bezpieczny..." : "Sprawdzanie pliku backupu w Google Drive...");
 
         const existing = await findDriveBackupFile();
+        let remoteStats = null;
+
+        if (existing) {
+          try {
+            const remoteResponse = await driveRequest(`https://www.googleapis.com/drive/v3/files/${existing.id}?alt=media`);
+            const remoteText = await remoteResponse.text();
+            remoteStats = getBackupStatsFromPayload(JSON.parse(remoteText));
+          } catch (error) {
+            remoteStats = null;
+          }
+        }
+
+        if (existing && isAuto && !hasDriveBaseline()) {
+          updateDriveHeaderStatus("connected", "Uwaga", "W Drive istnieje backup, ale to urządzenie nie wczytało go jeszcze. Najpierw synchronizuj/wczytaj.");
+          setGoogleDriveStatus("Zatrzymano autosave: w Drive istnieje backup, a to urządzenie nie ma jeszcze potwierdzonej synchronizacji. Kliknij „Wczytaj dane z Drive” albo „Bezpiecznie synchronizuj”, żeby nie nadpisać danych pustą stroną.");
+          return null;
+        }
+
+        if (isManual && options.forcePrompt !== false && !confirmManualDriveOverwrite(existing, remoteStats)) {
+          setGoogleDriveStatus("Anulowano awaryjny zapis do Drive. Dane lokalne nie nadpisały backupu.");
+          updateDriveHeaderStatus("connected", "Tak", "Google Drive połączony. Awaryjny zapis anulowany.");
+          return null;
+        }
+
+        const jsonText = JSON.stringify(getBackupData(), null, 2);
+        updateDriveHeaderStatus("syncing", "Zapis", "Trwa zapis danych do Google Drive.");
+        setGoogleDriveStatus(isAuto ? "Autosynchronizacja: zapisywanie zmian do Google Drive..." : "Zapisywanie danych do Google Drive...");
+
         const result = existing
           ? await updateDriveBackupFile(existing.id, jsonText)
           : await createDriveBackupFile(jsonText);
@@ -6900,12 +7038,18 @@ libro = książka"></textarea>
       }
     }
 
-    async function syncDriveNow() {
+    async function syncDriveNow(options = {}) {
+      const isManual = Boolean(options.manual);
+
       try {
         setGoogleDriveStatus("Synchronizacja: sprawdzanie Google Drive...");
 
         const existing = await findDriveBackupFile();
         if (!existing) {
+          if (isManual) {
+            setGoogleDriveStatus("W Drive nie ma jeszcze backupu. Możesz użyć awaryjnego zapisu, jeśli chcesz utworzyć pierwszy backup z tego urządzenia.");
+            return;
+          }
           await saveBackupToDrive({ auto: true });
           return;
         }
@@ -6915,11 +7059,36 @@ libro = książka"></textarea>
         const parsed = JSON.parse(text);
         const remoteTime = getBackupTime(parsed, existing.modifiedTime);
         const localTime = getLocalChangeTime();
+        const remoteStats = getBackupStatsFromPayload(parsed);
+        const localStats = getLocalBackupStats();
+
+        if (!hasDriveBaseline()) {
+          if (localStats.meaningfulTotal > 0 && remoteStats.meaningfulTotal > 0) {
+            setGoogleDriveStatus("Synchronizacja zatrzymana: to urządzenie ma lokalne dane, ale nie wczytało jeszcze backupu z Drive. Żeby nie nadpisać niczego omyłkowo, użyj „Wczytaj dane z Drive” albo czerwonego awaryjnego nadpisania, jeśli naprawdę chcesz zastąpić backup.");
+            updateDriveHeaderStatus("connected", "Uwaga", "Nie nadpisano Drive, bo urządzenie nie ma bazowej synchronizacji.");
+            return;
+          }
+
+          if (localStats.meaningfulTotal > 0 && localTime > remoteTime + 1500) {
+            setGoogleDriveStatus("Synchronizacja zatrzymana: to urządzenie ma lokalne zmiany, ale nie wczytało jeszcze backupu z Drive. Najpierw ręcznie wczytaj Drive albo użyj awaryjnego nadpisania, jeśli naprawdę chcesz zastąpić backup.");
+            updateDriveHeaderStatus("connected", "Uwaga", "Nie nadpisano Drive, bo urządzenie nie ma bazowej synchronizacji.");
+            return;
+          }
+
+          if (dataTransferBox) dataTransferBox.value = JSON.stringify(parsed, null, 2);
+          applyImportedData(parsed, { confirm: false, silent: true });
+          localStorage.setItem(localChangeStorageKey, new Date(remoteTime).toISOString());
+          localStorage.setItem(driveLastSaveStorageKey, existing.modifiedTime || new Date(remoteTime).toISOString());
+          setGoogleDriveStatus("Synchronizacja: to urządzenie najpierw wczytało istniejący backup z Google Drive, żeby nie nadpisać go pustymi danymi. Dane Drive: " + formatBackupStats(remoteStats));
+          updateDriveAutoSyncUi();
+          return;
+        }
 
         if (remoteTime > localTime + 1500) {
           if (dataTransferBox) dataTransferBox.value = JSON.stringify(parsed, null, 2);
           applyImportedData(parsed, { confirm: false, silent: true });
           localStorage.setItem(localChangeStorageKey, new Date(remoteTime).toISOString());
+          localStorage.setItem(driveLastSaveStorageKey, existing.modifiedTime || new Date(remoteTime).toISOString());
           setGoogleDriveStatus("Synchronizacja: wczytano nowsze dane z Google Drive.");
           updateDriveAutoSyncUi();
           return;
@@ -7016,10 +7185,16 @@ libro = książka"></textarea>
       }
     });
 
+    if (noteCategoryInput) {
+      noteCategoryInput.addEventListener("input", updateNotePasswordInputState);
+      noteCategoryInput.addEventListener("change", updateNotePasswordInputState);
+    }
+
     if (googleClientIdInput) {
       googleClientIdInput.value = getSavedGoogleClientId();
     }
 
+    updateNotePasswordInputState();
     updateDriveAutoSyncUi();
 
     normalizeHabits();
