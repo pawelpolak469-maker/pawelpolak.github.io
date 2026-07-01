@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v17 manualna nauka</title>
+  <title>Habit Pixel v18 Drive autosync header</title>
 
   <style>
     :root {
@@ -85,7 +85,7 @@
 
     .top-metrics {
       display: grid;
-      grid-template-columns: repeat(3, minmax(110px, auto));
+      grid-template-columns: repeat(4, minmax(96px, auto));
       gap: 8px;
     }
 
@@ -111,6 +111,45 @@
       color: var(--text);
       font-size: 14px;
       font-weight: 800;
+    }
+
+    .drive-status-chip {
+      cursor: pointer;
+      border-color: rgba(255, 107, 107, 0.36);
+      background: linear-gradient(180deg, rgba(80, 18, 22, 0.78), rgba(31, 8, 12, 0.92));
+      box-shadow: 0 10px 28px rgba(255, 107, 107, 0.10);
+    }
+
+    .drive-status-chip span {
+      color: rgba(255, 214, 214, 0.86);
+    }
+
+    .drive-status-chip b {
+      color: #ff8b8b;
+    }
+
+    .drive-status-chip.connected {
+      border-color: rgba(83, 214, 162, 0.44);
+      background: linear-gradient(180deg, rgba(15, 69, 48, 0.72), rgba(6, 31, 22, 0.94));
+      box-shadow: 0 10px 28px rgba(83, 214, 162, 0.12);
+    }
+
+    .drive-status-chip.connected span {
+      color: rgba(209, 255, 235, 0.82);
+    }
+
+    .drive-status-chip.connected b {
+      color: #7be2b8;
+    }
+
+    .drive-status-chip.syncing {
+      border-color: rgba(255, 209, 102, 0.40);
+      background: linear-gradient(180deg, rgba(78, 57, 15, 0.70), rgba(32, 23, 8, 0.94));
+      box-shadow: 0 10px 28px rgba(255, 209, 102, 0.10);
+    }
+
+    .drive-status-chip.syncing b {
+      color: #ffd166;
     }
 
     .card {
@@ -1395,7 +1434,7 @@
       }
 
       .top-metrics {
-        grid-template-columns: repeat(3, 1fr);
+        grid-template-columns: repeat(4, 1fr);
       }
 
       .dashboard-grid {
@@ -1416,7 +1455,7 @@
       }
 
       .top-metrics {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
       }
 
       .card {
@@ -1554,7 +1593,7 @@
       }
 
       .top-metrics {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
+        grid-template-columns: repeat(4, minmax(0, 1fr));
         gap: 5px;
       }
 
@@ -1577,6 +1616,19 @@
         line-height: 1.15;
         overflow: hidden;
         text-overflow: ellipsis;
+      }
+
+      .drive-status-chip {
+        padding-left: 4px;
+        padding-right: 4px;
+      }
+
+      .drive-status-chip span {
+        font-size: 8.8px;
+      }
+
+      .drive-status-chip b {
+        font-size: 11px;
       }
 
       .card {
@@ -1924,6 +1976,11 @@
         <div class="top-chip">
           <span>Ostatnia waga</span>
           <b id="topLastWeight">Brak</b>
+        </div>
+
+        <div class="top-chip drive-status-chip" id="driveHeaderChip" onclick="connectGoogleDrive()" title="Kliknij, aby połączyć Google Drive">
+          <span>Google Drive</span>
+          <b id="driveHeaderStatus">Nie</b>
         </div>
       </div>
     </div>
@@ -2714,6 +2771,8 @@ libro = książka"></textarea>
     const topDoneToday = document.getElementById("topDoneToday");
     const topBestStreak = document.getElementById("topBestStreak");
     const topLastWeight = document.getElementById("topLastWeight");
+    const driveHeaderChip = document.getElementById("driveHeaderChip");
+    const driveHeaderStatus = document.getElementById("driveHeaderStatus");
 
     const dashDoneToday = document.getElementById("dashDoneToday");
     const dashBestStreak = document.getElementById("dashBestStreak");
@@ -2818,12 +2877,15 @@ libro = książka"></textarea>
     const googleClientIdStorageKey = "habit-pixel-google-client-id";
     const driveAutoSyncStorageKey = "habit-pixel-drive-auto-sync";
     const localChangeStorageKey = "habit-pixel-last-local-change";
+    const driveLastSaveStorageKey = "habit-pixel-last-drive-save";
     const studyWordsVisibleStorageKey = "habit-pixel-study-words-visible";
     const driveBackupFileName = "habit_pixel_backup.json";
     const driveScope = "https://www.googleapis.com/auth/drive.appdata";
     let googleAccessToken = "";
     let googleTokenClient = null;
     let driveAutoSaveTimer = null;
+    let driveAutoSyncInterval = null;
+    let driveSyncInProgress = false;
     let suppressDriveAutoSave = false;
     let appReadyForAutoSync = false;
 
@@ -6453,6 +6515,20 @@ libro = książka"></textarea>
       return localStorage.getItem(driveAutoSyncStorageKey) === "true";
     }
 
+    function updateDriveHeaderStatus(state = null, text = null, title = null) {
+      if (!driveHeaderChip || !driveHeaderStatus) return;
+
+      const isConnected = state ? state === "connected" || state === "syncing" : Boolean(googleAccessToken);
+      const nextState = state || (isConnected ? "connected" : "disconnected");
+
+      driveHeaderChip.classList.remove("connected", "syncing", "disconnected");
+      driveHeaderChip.classList.add(nextState);
+      driveHeaderStatus.textContent = text || (isConnected ? "Tak" : "Nie");
+      driveHeaderChip.title = title || (isConnected
+        ? "Google Drive połączony. Kliknij, aby odświeżyć połączenie."
+        : "Google Drive niepołączony. Kliknij, aby połączyć.");
+    }
+
     function updateDriveAutoSyncUi() {
       const enabled = getDriveAutoSyncEnabled();
 
@@ -6462,10 +6538,23 @@ libro = książka"></textarea>
 
       if (driveAutoSyncInfo) {
         const lastLocalChange = localStorage.getItem(localChangeStorageKey) || "brak";
+        const lastDriveSave = localStorage.getItem(driveLastSaveStorageKey) || "brak";
         driveAutoSyncInfo.textContent = enabled
-          ? "Autosynchronizacja: włączona. Po połączeniu z Drive nowszy save będzie pobierany, a lokalne zmiany będą zapisywane automatycznie. Ostatnia lokalna zmiana: " + lastLocalChange
+          ? "Autosynchronizacja: włączona. Zmiany zapisują się lokalnie od razu, a Drive dostaje aktualizację po zmianie i kontrolnie co 30 sekund. Ostatnia lokalna zmiana: " + lastLocalChange + ". Ostatni zapis Drive: " + lastDriveSave
           : "Autosynchronizacja: wyłączona. Możesz nadal używać ręcznych przycisków zapisu i odczytu.";
       }
+
+      updateDriveHeaderStatus();
+    }
+
+    function getLastDriveSaveTime() {
+      const raw = localStorage.getItem(driveLastSaveStorageKey);
+      const time = raw ? Date.parse(raw) : 0;
+      return Number.isFinite(time) ? time : 0;
+    }
+
+    function hasUnsyncedLocalChanges() {
+      return getLocalChangeTime() > getLastDriveSaveTime() + 1000;
     }
 
     function getLocalChangeTime() {
@@ -6492,14 +6581,37 @@ libro = książka"></textarea>
       if (!getDriveAutoSyncEnabled()) return;
 
       if (!googleAccessToken) {
-        setGoogleDriveStatus("Autosynchronizacja jest włączona, ale Drive nie jest połączony. Kliknij „Połącz z Google Drive”.");
+        updateDriveHeaderStatus("disconnected", "Nie", "Drive niepołączony. Kliknij, aby połączyć.");
+        setGoogleDriveStatus("Autosynchronizacja jest włączona, ale Drive nie jest połączony. Kliknij wskaźnik Google Drive w headerze albo przycisk w ustawieniach.");
         return;
       }
 
       clearTimeout(driveAutoSaveTimer);
       driveAutoSaveTimer = setTimeout(() => {
-        saveBackupToDrive({ auto: true });
+        if (hasUnsyncedLocalChanges()) saveBackupToDrive({ auto: true });
       }, 1800);
+    }
+
+    async function runDriveAutoSyncTick() {
+      updateDriveHeaderStatus();
+
+      if (!appReadyForAutoSync || !getDriveAutoSyncEnabled()) return;
+
+      if (!googleAccessToken) {
+        setGoogleDriveStatus("Google Drive niepołączony. Dane zapisują się lokalnie; kliknij wskaźnik w headerze, żeby włączyć zapis w chmurze.");
+        updateDriveHeaderStatus("disconnected", "Nie", "Drive niepołączony. Kliknij, aby połączyć.");
+        return;
+      }
+
+      if (hasUnsyncedLocalChanges()) {
+        await saveBackupToDrive({ auto: true, periodic: true });
+      }
+    }
+
+    function startDriveAutoSyncLoop() {
+      clearInterval(driveAutoSyncInterval);
+      driveAutoSyncInterval = setInterval(runDriveAutoSyncTick, 30000);
+      updateDriveHeaderStatus();
     }
 
     async function toggleDriveAutoSync() {
@@ -6512,6 +6624,8 @@ libro = książka"></textarea>
           await requestGoogleAccessToken("consent");
           await syncDriveNow();
         } catch (error) {
+          googleAccessToken = "";
+          updateDriveHeaderStatus("disconnected", "Nie", "Drive niepołączony. Kliknij, aby spróbować ponownie.");
           setGoogleDriveStatus("Autosynchronizacja włączona, ale połączenie z Drive nie powiodło się: " + error.message);
         }
       } else {
@@ -6522,6 +6636,7 @@ libro = książka"></textarea>
 
     function setGoogleDriveStatus(message) {
       if (googleDriveStatus) googleDriveStatus.textContent = message;
+      updateDriveHeaderStatus();
     }
 
     function getSavedGoogleClientId() {
@@ -6607,6 +6722,7 @@ libro = książka"></textarea>
             return;
           }
 
+          updateDriveHeaderStatus("connected", "Tak", "Google Drive połączony. Autosynchronizacja może zapisywać dane.");
           setGoogleDriveStatus("Połączono z Google Drive. Autosynchronizacja może teraz zapisywać zmiany po każdej akcji.");
           resolve(googleAccessToken);
         };
@@ -6623,6 +6739,8 @@ libro = książka"></textarea>
         await syncDriveNow();
         setGoogleDriveStatus("Drive połączony. Autosynchronizacja jest włączona — zmiany z przycisków będą zapisywane automatycznie po krótkiej chwili.");
       } catch (error) {
+        googleAccessToken = "";
+        updateDriveHeaderStatus("disconnected", "Nie", "Drive niepołączony. Kliknij, aby spróbować ponownie.");
         setGoogleDriveStatus("Nie udało się połączyć z Google Drive: " + error.message);
       }
     }
@@ -6644,6 +6762,10 @@ libro = książka"></textarea>
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => "");
+        if (response.status === 401 || response.status === 403) {
+          googleAccessToken = "";
+          updateDriveHeaderStatus("disconnected", "Nie", "Sesja Google Drive wygasła. Kliknij, aby połączyć ponownie.");
+        }
         throw new Error("Drive API: " + response.status + " " + errorText.slice(0, 160));
       }
 
@@ -6700,15 +6822,32 @@ libro = książka"></textarea>
     }
 
     async function saveBackupToDrive(options = {}) {
+      const isAuto = Boolean(options.auto);
+
+      if (driveSyncInProgress) {
+        if (!isAuto) setGoogleDriveStatus("Drive jest już w trakcie zapisu. Poczekaj chwilę i spróbuj ponownie.");
+        return null;
+      }
+
+      driveSyncInProgress = true;
+
       try {
-        const isAuto = Boolean(options.auto);
         const nowIso = new Date().toISOString();
 
         if (!localStorage.getItem(localChangeStorageKey)) {
           localStorage.setItem(localChangeStorageKey, nowIso);
         }
 
+        if (!googleAccessToken) {
+          updateDriveHeaderStatus("disconnected", "Nie", "Drive niepołączony. Kliknij, aby połączyć.");
+          if (isAuto) {
+            setGoogleDriveStatus("Autosynchronizacja czeka: Google Drive nie jest połączony.");
+            return null;
+          }
+        }
+
         const jsonText = JSON.stringify(getBackupData(), null, 2);
+        updateDriveHeaderStatus("syncing", "Zapis", "Trwa zapis danych do Google Drive.");
         setGoogleDriveStatus(isAuto ? "Autosynchronizacja: zapisywanie zmian do Google Drive..." : "Łączenie z Google Drive i szukanie pliku backupu...");
 
         const existing = await findDriveBackupFile();
@@ -6716,10 +6855,22 @@ libro = książka"></textarea>
           ? await updateDriveBackupFile(existing.id, jsonText)
           : await createDriveBackupFile(jsonText);
 
-        setGoogleDriveStatus((isAuto ? "Autosynchronizacja zapisana. " : "Backup zapisany w Google Drive. ") + "Ostatnia aktualizacja: " + formatDate(result.modifiedTime || new Date().toISOString()));
+        const savedAt = result.modifiedTime || new Date().toISOString();
+        localStorage.setItem(driveLastSaveStorageKey, savedAt);
+        updateDriveHeaderStatus("connected", "Tak", "Google Drive połączony. Ostatni zapis: " + formatDate(savedAt));
+        setGoogleDriveStatus((isAuto ? "Autosynchronizacja zapisana. " : "Backup zapisany w Google Drive. ") + "Ostatnia aktualizacja: " + formatDate(savedAt));
         updateDriveAutoSyncUi();
+        return result;
       } catch (error) {
+        if (!googleAccessToken) {
+          updateDriveHeaderStatus("disconnected", "Nie", "Sesja Google Drive wygasła. Kliknij, aby połączyć ponownie.");
+        } else {
+          updateDriveHeaderStatus("connected", "Błąd", "Drive jest połączony, ale ostatni zapis się nie udał.");
+        }
         setGoogleDriveStatus("Nie udało się zapisać do Google Drive: " + error.message);
+        return null;
+      } finally {
+        driveSyncInProgress = false;
       }
     }
 
@@ -6738,6 +6889,8 @@ libro = książka"></textarea>
         const parsed = JSON.parse(text);
         if (dataTransferBox) dataTransferBox.value = JSON.stringify(parsed, null, 2);
         applyImportedData(parsed, { confirm: options.confirm !== false, silent: options.silent === true });
+        localStorage.setItem(driveLastSaveStorageKey, existing.modifiedTime || new Date().toISOString());
+        updateDriveHeaderStatus("connected", "Tak", "Google Drive połączony. Backup wczytany.");
         setGoogleDriveStatus("Backup wczytany z Google Drive. Data pliku: " + formatDate(existing.modifiedTime || new Date().toISOString()));
         updateDriveAutoSyncUi();
         return { file: existing, parsed };
@@ -6777,9 +6930,12 @@ libro = książka"></textarea>
           return;
         }
 
+        if (existing && existing.modifiedTime) localStorage.setItem(driveLastSaveStorageKey, existing.modifiedTime);
+        updateDriveHeaderStatus("connected", "Tak", "Google Drive połączony. Dane są aktualne.");
         setGoogleDriveStatus("Synchronizacja: dane lokalne i Drive są już aktualne.");
         updateDriveAutoSyncUi();
       } catch (error) {
+        if (!googleAccessToken) updateDriveHeaderStatus("disconnected", "Nie", "Sesja Google Drive wygasła. Kliknij, aby połączyć ponownie.");
         setGoogleDriveStatus("Synchronizacja nie powiodła się: " + error.message);
       }
     }
@@ -6887,6 +7043,7 @@ libro = książka"></textarea>
     renderDevelopment();
     appReadyForAutoSync = true;
     updateDriveAutoSyncUi();
+    startDriveAutoSyncLoop();
   </script>
 
 </body>
