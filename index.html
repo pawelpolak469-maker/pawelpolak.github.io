@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v45 optymalizacja nauki i kategorie rytmu</title>
+  <title>Habit Pixel v48 optymalizacja dużych danych</title>
 
   <style>
     :root {
@@ -2469,6 +2469,72 @@
       font-size: 13px;
     }
 
+
+    .study-list-section {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(8, 11, 18, 0.42);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+    }
+
+    .study-list-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+
+    .study-list-section-title {
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 900;
+      letter-spacing: 0.02em;
+    }
+
+    .study-list-mode-switch {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      padding: 8px;
+      border-radius: 18px;
+      background: rgba(8, 11, 18, 0.62);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .study-list-mode-button {
+      display: grid;
+      gap: 4px;
+      justify-items: center;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(17, 24, 39, 0.82);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+
+    .study-list-mode-button small {
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.2;
+    }
+
+    .study-list-mode-button.active {
+      background: linear-gradient(180deg, var(--accent), var(--accent-deep));
+      color: white;
+      border-color: rgba(141, 176, 255, 0.60);
+      box-shadow: 0 10px 28px rgba(36, 107, 255, 0.18);
+    }
+
+    .study-list-mode-button.active small {
+      color: rgba(255, 255, 255, 0.78);
+    }
+
     .habit-learning-category-box {
       display: grid;
       gap: 10px;
@@ -4927,8 +4993,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     let openedNoteIndex = null;
     let expandedNoteIds = new Set();
     let openedExerciseKey = null;
-    let forceFullStudyWordsList = false;
-    let forceFullStudyConceptsList = false;
+    let studyWordsShownCount = 50;
+    let studyConceptsShownCount = 50;
+    let studyWordsListMode = "learning";
+    let studyConceptsListMode = "learning";
+    let studyWordsVisibleCategoryId = "";
+    let studyConceptsVisibleCategoryId = "";
 
     const oldCompletedDays = [];
 
@@ -5064,6 +5134,185 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     let weightChartHitPoints = [];
     let studyProgressChartHoverPoint = null;
     let studyProgressChartHitPoints = [];
+
+    /* v48: optymalizacja dużych danych bez zmiany struktury strony.
+       Najcięższe operacje są porcjowane albo uruchamiane tylko dla aktywnej zakładki. */
+    const PERFORMANCE_PAGE_SIZE = 50;
+    const PERFORMANCE_GRID_BATCH_SIZE = 70;
+    let noteFolderShownCounts = {};
+    let gridRenderToken = 0;
+    let habitsRenderTimer = null;
+    let developmentRenderTimer = null;
+    let dashboardRenderTimer = null;
+    let developmentCache = null;
+
+    function isViewActive(viewName) {
+      const view = document.getElementById("view-" + viewName);
+      return Boolean(view && view.classList.contains("active"));
+    }
+
+    function runWhenBrowserIsFree(callback) {
+      if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+        window.requestIdleCallback(callback, { timeout: 120 });
+      } else {
+        setTimeout(callback, 0);
+      }
+    }
+
+    function renderGridInChunks(grid, totalItems, createCell, batchSize = PERFORMANCE_GRID_BATCH_SIZE) {
+      if (!grid) return;
+      const token = String(++gridRenderToken);
+      grid.dataset.renderToken = token;
+      grid.innerHTML = "";
+
+      let index = 1;
+      function drawChunk(deadline) {
+        if (!grid || grid.dataset.renderToken !== token) return;
+
+        const fragment = document.createDocumentFragment();
+        let created = 0;
+
+        while (index <= totalItems && created < batchSize) {
+          if (deadline && typeof deadline.timeRemaining === "function" && created > 12 && deadline.timeRemaining() < 4) {
+            break;
+          }
+          fragment.appendChild(createCell(index));
+          index++;
+          created++;
+        }
+
+        grid.appendChild(fragment);
+
+        if (index <= totalItems) {
+          runWhenBrowserIsFree(drawChunk);
+        }
+      }
+
+      runWhenBrowserIsFree(drawChunk);
+    }
+
+    function invalidateDevelopmentCache() {
+      developmentCache = null;
+    }
+
+    function getDevelopmentCache() {
+      if (developmentCache) return developmentCache;
+
+      const currentYear = new Date().getFullYear();
+      const dates = [];
+      const rhythmHabits = (Array.isArray(habits) ? habits : []).filter(habit => !isTrainingHabit(habit) && !isLearningHabit(habit));
+      const rhythmDoneByDay = new Map();
+
+      rhythmHabits.forEach(habit => {
+        uniqueCompleted(habit).forEach(dayNumber => {
+          rhythmDoneByDay.set(dayNumber, (rhythmDoneByDay.get(dayNumber) || 0) + 1);
+          const date = dateFromDayOfYear(dayNumber);
+          if (date.getFullYear() === currentYear) dates.push(date);
+        });
+      });
+
+      normalizeStudy();
+      const wordLessonsByDate = new Map();
+      const conceptLessonsByDate = new Map();
+      const studyEventsByDate = new Map();
+      const studyActivityByDate = new Map();
+      const studyLessonEntries = [];
+      let hasWords = false;
+      let hasConcepts = false;
+
+      function addMapValue(map, key, value) {
+        if (!key) return;
+        map.set(key, (map.get(key) || 0) + Number(value || 0));
+      }
+
+      study.languages.forEach(language => {
+        const words = Array.isArray(language.words) ? language.words : [];
+        if (words.length > 0) hasWords = true;
+        normalizeStudyProgressHistory(language.progressHistory).forEach(entry => {
+          const date = getLocalDateFromKey(entry.date);
+          if (date && date.getFullYear() === currentYear) dates.push(date);
+          addMapValue(wordLessonsByDate, entry.date, entry.lessons);
+          addMapValue(studyEventsByDate, entry.date, Number(entry.learned || 0) + Number(entry.forgotten || 0));
+          addMapValue(studyActivityByDate, entry.date, Number(entry.learned || 0) * 12 + Number(entry.forgotten || 0) * 4);
+          if (Number(entry.lessons || 0) > 0) studyLessonEntries.push({ date: entry.date, lessons: Number(entry.lessons || 0) });
+        });
+      });
+
+      study.conceptCategories.forEach(category => {
+        const concepts = Array.isArray(category.concepts) ? category.concepts : [];
+        if (concepts.length > 0) hasConcepts = true;
+        normalizeStudyConceptProgressHistory(category.conceptProgressHistory).forEach(entry => {
+          const date = getLocalDateFromKey(entry.date);
+          if (date && date.getFullYear() === currentYear) dates.push(date);
+          addMapValue(conceptLessonsByDate, entry.date, entry.lessons);
+          addMapValue(studyEventsByDate, entry.date, Number(entry.learned || 0) + Number(entry.forgotten || 0));
+          addMapValue(studyActivityByDate, entry.date, Number(entry.learned || 0) * 12 + Number(entry.forgotten || 0) * 4);
+          if (Number(entry.lessons || 0) > 0) studyLessonEntries.push({ date: entry.date, lessons: Number(entry.lessons || 0) });
+        });
+      });
+
+      normalizeTraining();
+      const trainingDoneByDate = new Map();
+      training.days.forEach(day => {
+        (day.exercises || []).forEach(exercise => {
+          (exercise.completed || []).forEach(dateKey => {
+            addMapValue(trainingDoneByDate, dateKey, 1);
+            const date = getLocalDateFromKey(dateKey);
+            if (date && date.getFullYear() === currentYear) dates.push(date);
+          });
+        });
+      });
+
+      let trackingStart;
+      if (!dates.length) {
+        trackingStart = new Date();
+      } else {
+        trackingStart = dates.sort((a, b) => a - b)[0];
+      }
+      trackingStart = new Date(trackingStart);
+      trackingStart.setHours(12, 0, 0, 0);
+
+      studyLessonEntries.sort((a, b) => a.date.localeCompare(b.date));
+
+      developmentCache = {
+        trackingStart,
+        rhythmHabits,
+        rhythmHabitCount: rhythmHabits.length,
+        rhythmDoneByDay,
+        wordLessonsByDate,
+        conceptLessonsByDate,
+        studyEventsByDate,
+        studyActivityByDate,
+        studyLessonEntries,
+        trainingDoneByDate,
+        hasWords,
+        hasConcepts
+      };
+
+      return developmentCache;
+    }
+
+    function scheduleRenderDashboard() {
+      clearTimeout(dashboardRenderTimer);
+      dashboardRenderTimer = setTimeout(() => {
+        renderDashboard();
+      }, 40);
+    }
+
+    function scheduleRenderHabits() {
+      if (!isViewActive("one")) {
+        scheduleRenderDashboard();
+        return;
+      }
+      clearTimeout(habitsRenderTimer);
+      habitsRenderTimer = setTimeout(() => renderHabits(), 70);
+    }
+
+    function scheduleRenderDevelopment() {
+      if (!isViewActive("habit")) return;
+      clearTimeout(developmentRenderTimer);
+      developmentRenderTimer = setTimeout(() => renderDevelopment(), 90);
+    }
 
     const habitsList = document.getElementById("habitsList");
     const headerSubtitle = document.getElementById("headerSubtitle");
@@ -5245,7 +5494,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const studyWordsVisibleStorageKey = "habit-pixel-study-words-visible";
     const studyConceptsVisibleStorageKey = "habit-pixel-study-concepts-visible";
     const studyActiveTabStorageKey = "habit-pixel-study-active-tab";
-    const studyVisibleListLimit = 120;
+    const studyVisibleListLimit = 50;
+    const studyListPageSize = 50;
     const driveBackupFileName = "habit_pixel_backup.json";
     const driveScope = "https://www.googleapis.com/auth/drive.appdata";
     let googleAccessToken = "";
@@ -5582,6 +5832,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
     function saveTraining() {
       normalizeTraining();
+      invalidateDevelopmentCache();
       localStorage.setItem(trainingStorageKey, JSON.stringify(training));
       markLocalDataChanged();
     }
@@ -5602,6 +5853,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
     function saveHabits() {
       normalizeHabits();
+      invalidateDevelopmentCache();
       localStorage.setItem(habitsStorageKey, JSON.stringify(habits));
       markLocalDataChanged();
     }
@@ -5610,6 +5862,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       weights = weights
         .filter(item => item && Number(item.weight) && item.date)
         .sort((a, b) => new Date(a.date) - new Date(b.date));
+      invalidateDevelopmentCache();
       localStorage.setItem(weightStorageKey, JSON.stringify(weights));
       markLocalDataChanged();
     }
@@ -5659,6 +5912,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
     function saveDevelopmentDebtSettingsToStorage() {
       developmentDebtSettings = normalizeDevelopmentDebtSettings(developmentDebtSettings);
+      invalidateDevelopmentCache();
       localStorage.setItem(developmentDebtSettingsStorageKey, JSON.stringify(developmentDebtSettings));
       markLocalDataChanged();
     }
@@ -5756,7 +6010,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       saveDevelopmentDebtSettingsToStorage();
       renderDevelopmentDebtSettingsForm();
-      renderHabits();
+      scheduleRenderHabits();
       alert("Ustawienia długu, dziennych limitów nauki i XP zostały zapisane. Panel Rozwój został przeliczony.");
     }
 
@@ -5764,7 +6018,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       developmentDebtSettings = createDefaultDevelopmentDebtSettings();
       saveDevelopmentDebtSettingsToStorage();
       renderDevelopmentDebtSettingsForm();
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function normalizeNoteCategory(value) {
@@ -6024,6 +6278,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     function setNoteCategoryFilter(value) {
       selectedNoteCategory = value || "all";
       openedNoteIndex = null;
+      noteFolderShownCounts = {};
       renderNotes();
     }
 
@@ -6477,15 +6732,13 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         if (conceptCategory) recordStudyConceptProgressSnapshot(conceptCategory);
       }
 
+      invalidateDevelopmentCache();
       localStorage.setItem(studyStorageKey, JSON.stringify(study));
       markLocalDataChanged();
 
-      if (!skipLinkedRenders) {
-        if (typeof renderHabits === "function") {
-          renderHabits();
-        } else if (typeof renderDevelopment === "function") {
-          renderDevelopment();
-        }
+      if (!skipLinkedRenders && appReadyForAutoSync) {
+        scheduleRenderHabits();
+        scheduleRenderDevelopment();
       }
     }
 
@@ -7568,27 +7821,32 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         return;
       }
 
+      if (studyConceptsVisibleCategoryId !== language.id) {
+        studyConceptsVisibleCategoryId = language.id;
+        studyConceptsShownCount = studyVisibleListLimit;
+        studyConceptsListMode = "learning";
+      }
+
       const allConcepts = Array.isArray(language.concepts) ? language.concepts : [];
       if (!allConcepts.length) {
         studyConceptsList.innerHTML = `<div class="empty-box">Ta kategoria nie ma jeszcze pojęć. Dodaj pierwsze hasło i definicję.</div>`;
         return;
       }
 
-      const concepts = allConcepts;
-
-      const sorted = [...concepts].sort((a, b) => {
-        if (Boolean(a.remembered) !== Boolean(b.remembered)) return a.remembered ? 1 : -1;
-        return normalizeStudyName(a.term).localeCompare(normalizeStudyName(b.term), "pl");
-      });
+      const sortByTerm = (a, b) => normalizeStudyName(a.term).localeCompare(normalizeStudyName(b.term), "pl");
+      const toLearnConcepts = allConcepts.filter(concept => !concept.remembered).sort(sortByTerm);
+      const rememberedConcepts = allConcepts.filter(concept => concept.remembered).sort(sortByTerm);
+      const activeConcepts = studyConceptsListMode === "remembered" ? rememberedConcepts : toLearnConcepts;
       const indexById = new Map(allConcepts.map((concept, index) => [concept.id, index]));
-      const conceptListLimit = forceFullStudyConceptsList ? sorted.length : studyVisibleListLimit;
-      const visibleConcepts = sorted.slice(0, conceptListLimit);
+      const conceptListLimit = Math.max(studyVisibleListLimit, studyConceptsShownCount);
+      const visibleConcepts = activeConcepts.slice(0, conceptListLimit);
       const fragment = document.createDocumentFragment();
 
-      visibleConcepts.forEach(concept => {
+      appendStudyListModeSwitch(fragment, "concepts", studyConceptsListMode, toLearnConcepts.length, rememberedConcepts.length, "pojęć");
+
+      const appendConceptCard = (section, concept) => {
         const index = indexById.get(concept.id);
         const remembered = Boolean(concept.remembered);
-        const keywords = "";
         const card = document.createElement("div");
         card.className = `study-word-card study-concept-card ${remembered ? "remembered-word" : "forgotten-word"}`;
         card.innerHTML = `
@@ -7596,7 +7854,6 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             <span class="study-word-status ${remembered ? "remembered" : "learning"}">${remembered ? "Zapamiętane" : "Do nauki"}</span>
             <div><b>${escapeHTML(concept.term)}</b></div>
             <div class="study-concept-definition">${escapeHTML(concept.definition)}</div>
-            ${keywords}
             <div class="inline-note">${escapeHTML(formatStudyDueInfo(concept))} • Umiem: ${Number(concept.correct || 0)} • Częściowo: ${Number(concept.partial || 0)} • Błędy: ${Number(concept.wrong || 0)}</div>
           </div>
           <div class="note-actions">
@@ -7604,11 +7861,32 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             <button class="small-btn danger" onclick="deleteStudyConcept(${index})">Usuń</button>
           </div>
         `;
-        fragment.appendChild(card);
-      });
+        section.appendChild(card);
+      };
+
+      if (visibleConcepts.length) {
+        const sectionTitle = studyConceptsListMode === "remembered" ? "Zapamiętane" : "Do nauki";
+        const sectionVariant = studyConceptsListMode === "remembered" ? "remembered" : "learning";
+        const section = createStudyListSection(sectionTitle, visibleConcepts.length, activeConcepts.length, sectionVariant);
+        visibleConcepts.forEach(concept => appendConceptCard(section, concept));
+        fragment.appendChild(section);
+      } else {
+        const empty = document.createElement("div");
+        empty.className = "empty-box";
+        empty.textContent = studyConceptsListMode === "remembered"
+          ? "W tej kategorii nie ma jeszcze zapamiętanych pojęć."
+          : "W tej kategorii nie ma aktualnie pojęć do nauki.";
+        fragment.appendChild(empty);
+      }
 
       studyConceptsList.appendChild(fragment);
-      appendStudyListLimitNote(studyConceptsList, sorted.length, visibleConcepts.length, "pojęć", "concepts");
+      appendStudyListLimitNote(
+        studyConceptsList,
+        activeConcepts.length,
+        visibleConcepts.length,
+        studyConceptsListMode === "remembered" ? "zapamiętanych pojęć" : "pojęć do nauki",
+        "concepts"
+      );
     }
 
     function renderStudyReviewInfo() {
@@ -8417,26 +8695,84 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       drawStudyProgressChart(getSelectedStudyLanguage());
     }
 
-    function showFullStudyList(type) {
-      if (!confirm("Pokazanie całej listy może ponownie spowolnić stronę przy dużej liczbie elementów. Pokazać mimo to?")) return;
+    function showMoreStudyList(type) {
       if (type === "concepts") {
-        forceFullStudyConceptsList = true;
+        studyConceptsShownCount += studyListPageSize;
         renderStudyConceptsOnly();
       } else {
-        forceFullStudyWordsList = true;
+        studyWordsShownCount += studyListPageSize;
         renderStudyWordsOnly();
       }
     }
 
+    function collapseStudyList(type) {
+      if (type === "concepts") {
+        studyConceptsShownCount = studyVisibleListLimit;
+        renderStudyConceptsOnly();
+      } else {
+        studyWordsShownCount = studyVisibleListLimit;
+        renderStudyWordsOnly();
+      }
+    }
+
+    function setStudyListMode(type, mode) {
+      const nextMode = mode === "remembered" ? "remembered" : "learning";
+      if (type === "concepts") {
+        if (studyConceptsListMode === nextMode) return;
+        studyConceptsListMode = nextMode;
+        studyConceptsShownCount = studyVisibleListLimit;
+        renderStudyConceptsOnly();
+      } else {
+        if (studyWordsListMode === nextMode) return;
+        studyWordsListMode = nextMode;
+        studyWordsShownCount = studyVisibleListLimit;
+        renderStudyWordsOnly();
+      }
+    }
+
+    function appendStudyListModeSwitch(container, type, currentMode, learningTotal, rememberedTotal, itemLabel) {
+      if (!container) return;
+      const switchBox = document.createElement("div");
+      switchBox.className = "study-list-mode-switch";
+      switchBox.innerHTML = `
+        <button class="study-list-mode-button ${currentMode === "learning" ? "active" : ""}" onclick="setStudyListMode('${type}', 'learning')">
+          <span>Do nauki</span>
+          <small>${learningTotal} ${itemLabel}</small>
+        </button>
+        <button class="study-list-mode-button ${currentMode === "remembered" ? "active" : ""}" onclick="setStudyListMode('${type}', 'remembered')">
+          <span>Zapamiętane</span>
+          <small>${rememberedTotal} ${itemLabel}</small>
+        </button>
+      `;
+      container.appendChild(switchBox);
+    }
+
     function appendStudyListLimitNote(container, total, shown, itemLabel, type) {
-      if (!container || total <= shown) return;
+      if (!container || total <= 0) return;
       const note = document.createElement("div");
       note.className = "study-list-limit-note";
+      const safeShown = Math.min(shown, total);
+      const hasMore = total > safeShown;
       note.innerHTML = `
-        <div>Pokazuję ${shown}/${total} ${itemLabel}, żeby strona nie muliła po dużym imporcie. Quiz i statystyki nadal korzystają z całej kategorii.</div>
-        <div class="settings-row" style="margin-top: 8px;"><button class="small-btn ghost" onclick="showFullStudyList('${type}')">Pokaż całą listę</button></div>
+        <div>Pokazuję ${safeShown}/${total} ${itemLabel}. Lista rozszerza się po ${studyListPageSize}, więc duży import nie dusi strony. Quiz i statystyki nadal korzystają z całej kategorii.</div>
+        <div class="settings-row" style="margin-top: 8px;">
+          ${hasMore ? `<button class="small-btn ghost" onclick="showMoreStudyList('${type}')">Pokaż kolejne ${studyListPageSize}</button>` : ""}
+          ${shown > studyVisibleListLimit ? `<button class="small-btn ghost" onclick="collapseStudyList('${type}')">Zwiń do ${studyVisibleListLimit}</button>` : ""}
+        </div>
       `;
       container.appendChild(note);
+    }
+
+    function createStudyListSection(title, shownCount, totalCount, variant = "default") {
+      const section = document.createElement("div");
+      section.className = `study-list-section ${variant}`;
+      section.innerHTML = `
+        <div class="study-list-section-head">
+          <span class="study-list-section-title">${escapeHTML(title)}</span>
+          <span>${shownCount}/${totalCount}</span>
+        </div>
+      `;
+      return section;
     }
 
     function renderStudyWordsOnly() {
@@ -8457,21 +8793,29 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         return;
       }
 
+      if (studyWordsVisibleCategoryId !== language.id) {
+        studyWordsVisibleCategoryId = language.id;
+        studyWordsShownCount = studyVisibleListLimit;
+        studyWordsListMode = "learning";
+      }
+
       if (!language.words.length) {
         studyWordsList.innerHTML = `<div class="empty-box">Ta kategoria nie ma jeszcze słówek. Dodaj pierwszą parę: słowo + tłumaczenie.</div>`;
         return;
       }
 
-      const words = [...language.words].sort((a, b) => {
-        if (Boolean(a.remembered) !== Boolean(b.remembered)) return a.remembered ? 1 : -1;
-        return normalizeStudyName(a.source).localeCompare(normalizeStudyName(b.source), "pl");
-      });
+      const sortBySource = (a, b) => normalizeStudyName(a.source).localeCompare(normalizeStudyName(b.source), "pl");
+      const toLearnWords = language.words.filter(word => !word.remembered).sort(sortBySource);
+      const rememberedWords = language.words.filter(word => word.remembered).sort(sortBySource);
+      const activeWords = studyWordsListMode === "remembered" ? rememberedWords : toLearnWords;
       const indexById = new Map(language.words.map((word, index) => [word.id, index]));
-      const wordListLimit = forceFullStudyWordsList ? words.length : studyVisibleListLimit;
-      const visibleWords = words.slice(0, wordListLimit);
+      const wordListLimit = Math.max(studyVisibleListLimit, studyWordsShownCount);
+      const visibleWords = activeWords.slice(0, wordListLimit);
       const fragment = document.createDocumentFragment();
 
-      visibleWords.forEach(word => {
+      appendStudyListModeSwitch(fragment, "words", studyWordsListMode, toLearnWords.length, rememberedWords.length, "słówek");
+
+      const appendWordCard = (section, word) => {
         const index = indexById.get(word.id);
         const remembered = Boolean(word.remembered);
         const card = document.createElement("div");
@@ -8487,11 +8831,32 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             <button class="small-btn danger" onclick="deleteStudyWord(${index})">Usuń</button>
           </div>
         `;
-        fragment.appendChild(card);
-      });
+        section.appendChild(card);
+      };
+
+      if (visibleWords.length) {
+        const sectionTitle = studyWordsListMode === "remembered" ? "Zapamiętane" : "Do nauki";
+        const sectionVariant = studyWordsListMode === "remembered" ? "remembered" : "learning";
+        const section = createStudyListSection(sectionTitle, visibleWords.length, activeWords.length, sectionVariant);
+        visibleWords.forEach(word => appendWordCard(section, word));
+        fragment.appendChild(section);
+      } else {
+        const empty = document.createElement("div");
+        empty.className = "empty-box";
+        empty.textContent = studyWordsListMode === "remembered"
+          ? "W tej kategorii nie ma jeszcze zapamiętanych słówek."
+          : "W tej kategorii nie ma aktualnie słówek do nauki.";
+        fragment.appendChild(empty);
+      }
 
       studyWordsList.appendChild(fragment);
-      appendStudyListLimitNote(studyWordsList, words.length, visibleWords.length, "słówek", "words");
+      appendStudyListLimitNote(
+        studyWordsList,
+        activeWords.length,
+        visibleWords.length,
+        studyWordsListMode === "remembered" ? "zapamiętanych słówek" : "słówek do nauki",
+        "words"
+      );
     }
 
     function renderStudy() {
@@ -9121,14 +9486,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     function renderAutoLearningGrid(type) {
       const grid = document.getElementById(`auto-learning-grid-${type}`);
       if (!grid) return;
-      grid.innerHTML = "";
 
       const todayNumber = getDayOfYear(new Date());
       const totalDays = daysInYear(year);
       const config = getAutoLearningGoalConfig(type);
-      const fragment = document.createDocumentFragment();
 
-      for (let dayNumber = 1; dayNumber <= totalDays; dayNumber++) {
+      renderGridInChunks(grid, totalDays, dayNumber => {
         const date = dateFromDayOfYear(dayNumber);
         const dateKey = getDateKey(date);
         const lessons = config.lessonsForDateKey(dateKey);
@@ -9141,10 +9504,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         cell.title = config.active
           ? `${config.title} | ${formatDayCellDate(dayNumber)} | ${lessons}/${expected} lekcji | ${done ? "wykonane" : "niewykonane"}`
           : `${config.title} | ${formatDayCellDate(dayNumber)} | brak aktywnego limitu albo elementów`;
-        fragment.appendChild(cell);
-      }
-
-      grid.appendChild(fragment);
+        return cell;
+      });
     }
 
     function renderHabits() {
@@ -9314,7 +9675,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       renderDashboard();
       renderSettingsInfo();
       renderTodaySummary();
-      renderDevelopment();
+      scheduleRenderDevelopment();
     }
 
     function renderLearningHabitGrid(index, type) {
@@ -9322,15 +9683,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       const habit = habits[index];
       if (!grid || !habit) return;
 
-      grid.innerHTML = "";
-
       const todayNumber = getDayOfYear(new Date());
       const totalDays = daysInYear(year);
       const categoryId = getLearningHabitCategoryId(habit, type);
       const config = getAutoLearningGoalConfig(type, categoryId);
-      const fragment = document.createDocumentFragment();
 
-      for (let dayNumber = 1; dayNumber <= totalDays; dayNumber++) {
+      renderGridInChunks(grid, totalDays, dayNumber => {
         const date = dateFromDayOfYear(dayNumber);
         const dateKey = getDateKey(date);
         const lessons = config.lessonsForDateKey(dateKey);
@@ -9343,10 +9701,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         cell.title = config.active
           ? `${habit.name} | ${config.categoryLabel} | ${formatDayCellDate(dayNumber)} | ${lessons}/${expected} lekcji | ${done ? "wykonane" : "niewykonane"}`
           : `${habit.name} | ${config.categoryLabel} | ${formatDayCellDate(dayNumber)} | brak aktywnego limitu albo elementów`;
-        fragment.appendChild(cell);
-      }
-
-      grid.appendChild(fragment);
+        return cell;
+      });
     }
 
     function renderHabitGrid(index) {
@@ -9355,33 +9711,19 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (!grid || !habit) return;
 
-      grid.innerHTML = "";
-
       const todayNumber = getDayOfYear(new Date());
       const totalDays = daysInYear(year);
-
       const completed = new Set(uniqueCompleted(habit));
-      const fragment = document.createDocumentFragment();
 
-      for (let i = 1; i <= totalDays; i++) {
+      renderGridInChunks(grid, totalDays, dayNumber => {
         const cell = document.createElement("div");
-        const done = completed.has(i);
-
+        const done = completed.has(dayNumber);
         cell.classList.add("day");
-
-        if (done) {
-          cell.classList.add("done");
-        }
-
-        if (i === todayNumber) {
-          cell.classList.add("today");
-        }
-
-        cell.title = `${habit.name} | ${formatDayCellDate(i)} | ${done ? "wykonane" : "niewykonane"}`;
-        fragment.appendChild(cell);
-      }
-
-      grid.appendChild(fragment);
+        if (done) cell.classList.add("done");
+        if (dayNumber === todayNumber) cell.classList.add("today");
+        cell.title = `${habit.name} | ${formatDayCellDate(dayNumber)} | ${done ? "wykonane" : "niewykonane"}`;
+        return cell;
+      });
     }
 
     function renderTrainingHabitGrid(index) {
@@ -9390,16 +9732,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (!grid || !habit) return;
 
-      grid.innerHTML = "";
-
       const todayNumber = getDayOfYear(new Date());
       const totalDays = daysInYear(year);
       const scheduledDays = new Set(getScheduledTrainingDayNumbers());
       const completed = new Set(uniqueCompleted(habit));
 
-      const fragment = document.createDocumentFragment();
-
-      for (let dayNumber = 1; dayNumber <= totalDays; dayNumber++) {
+      renderGridInChunks(grid, totalDays, dayNumber => {
         const date = dateFromDayOfYear(dayNumber);
         const cell = document.createElement("div");
         const scheduled = scheduledDays.has(dayNumber);
@@ -9409,14 +9747,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           : "";
 
         cell.classList.add("day", scheduled ? "training-day-active" : "training-day-inactive");
-
-        if (done) {
-          cell.classList.add("done");
-        }
-
-        if (dayNumber === todayNumber) {
-          cell.classList.add("today");
-        }
+        if (done) cell.classList.add("done");
+        if (dayNumber === todayNumber) cell.classList.add("today");
 
         cell.title = scheduled
           ? `${habit.name} | ${formatDayCellDate(dayNumber)} | ${trainingDays || "trening"} | ${done ? "wykonane" : "niewykonane"} | kliknij, aby zmienić`
@@ -9435,10 +9767,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           });
         }
 
-        fragment.appendChild(cell);
-      }
-
-      grid.appendChild(fragment);
+        return cell;
+      });
     }
 
     function renderDashboard() {
@@ -9497,6 +9827,26 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
 
+    function getNoteFolderShownCount(category) {
+      const key = normalizeNoteCategory(category);
+      return Math.max(PERFORMANCE_PAGE_SIZE, Number(noteFolderShownCounts[key] || PERFORMANCE_PAGE_SIZE));
+    }
+
+    function showMoreRenderedNoteFolder(groupIndex) {
+      const category = renderedNoteFolderCategories[groupIndex];
+      if (!category) return;
+      noteFolderShownCounts[category] = getNoteFolderShownCount(category) + PERFORMANCE_PAGE_SIZE;
+      renderNotes();
+    }
+
+    function showAllRenderedNoteFolder(groupIndex) {
+      const category = renderedNoteFolderCategories[groupIndex];
+      if (!category) return;
+      const total = (Array.isArray(notes) ? notes : []).filter(note => normalizeNoteCategory(note.category) === category).length;
+      noteFolderShownCounts[category] = Math.max(PERFORMANCE_PAGE_SIZE, total);
+      renderNotes();
+    }
+
     function addNote() {
       if (!noteInput) return;
 
@@ -9533,6 +9883,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       const text = String(note.text || "");
       const isLongNote = text.length > 520 || text.split("\n").length > 8;
       const isExpanded = expandedNoteIds.has(noteId);
+      const visibleText = isLongNote && !isExpanded ? text.slice(0, 900).trimEnd() + "…" : text;
       const card = document.createElement("div");
       card.className = `note-card ${note.pinned ? "pinned-note" : ""}`;
 
@@ -9550,29 +9901,31 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           </div>
         </div>
 
-        <div class="note-body ${isLongNote && !isExpanded ? "collapsed-note-body" : ""}">${escapeHTML(text)}</div>
+        <div class="note-body ${isLongNote && !isExpanded ? "collapsed-note-body" : ""}">${escapeHTML(visibleText)}</div>
         ${isLongNote ? `
           <div class="note-read-more-row">
             <button class="small-btn ghost" onclick="toggleNoteReadMore(${index})">${isExpanded ? "Zwiń notatkę" : "Rozwiń notatkę"}</button>
           </div>
         ` : ""}
 
-        <div class="edit-box ${isOpen ? "active" : ""}">
-          <label class="field-label">
-            Folder / kategoria
-            <input id="note-edit-category-${index}" list="noteCategorySuggestions" value="${escapeHTML(category)}" />
-          </label>
+        ${isOpen ? `
+          <div class="edit-box active">
+            <label class="field-label">
+              Folder / kategoria
+              <input id="note-edit-category-${index}" list="noteCategorySuggestions" value="${escapeHTML(category)}" />
+            </label>
 
-          <label class="field-label">
-            Edycja notatki
-            <textarea id="note-edit-${index}">${escapeHTML(note.text)}</textarea>
-          </label>
+            <label class="field-label">
+              Edycja notatki
+              <textarea id="note-edit-${index}">${escapeHTML(note.text)}</textarea>
+            </label>
 
-          <div class="settings-row">
-            <button onclick="saveNoteEdit(${index})">Zapisz zmiany</button>
-            <button class="ghost" onclick="toggleNoteEdit(${index})">Anuluj</button>
+            <div class="settings-row">
+              <button onclick="saveNoteEdit(${index})">Zapisz zmiany</button>
+              <button class="ghost" onclick="toggleNoteEdit(${index})">Anuluj</button>
+            </div>
           </div>
-        </div>
+        ` : ""}
       `;
 
       return card;
@@ -9581,7 +9934,6 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     function renderNotes() {
       if (!notesList) return;
 
-      saveNotes();
       renderNoteCategoryOptions();
       notesList.innerHTML = "";
 
@@ -9640,9 +9992,24 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         } else if (!group.entries.length) {
           body.innerHTML = `<div class="empty-box">Folder istnieje, ale nie ma jeszcze notatek. Wpisz notatkę wyżej i wybierz ten folder.</div>`;
         } else {
-          group.entries.forEach(entry => {
+          const shownCount = getNoteFolderShownCount(group.category);
+          const visibleEntries = group.entries.slice(0, shownCount);
+          visibleEntries.forEach(entry => {
             body.appendChild(buildNoteCard(entry.note, entry.index));
           });
+
+          if (group.entries.length > visibleEntries.length) {
+            const moreBox = document.createElement("div");
+            moreBox.className = "empty-box";
+            moreBox.innerHTML = `
+              Pokazano ${visibleEntries.length}/${group.entries.length} notatek w tym folderze.
+              <div class="settings-row" style="margin-top: 10px;">
+                <button class="ghost" onclick="showMoreRenderedNoteFolder(${groupIndex})">Pokaż kolejne ${PERFORMANCE_PAGE_SIZE}</button>
+                <button class="ghost" onclick="showAllRenderedNoteFolder(${groupIndex})">Pokaż wszystkie w folderze</button>
+              </div>
+            `;
+            body.appendChild(moreBox);
+          }
         }
 
         folder.appendChild(head);
@@ -9866,62 +10233,28 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function getStudyEventCountForDateKey(dateKey) {
-      normalizeStudy();
-      const wordEvents = study.languages.reduce((sum, language) => {
-        return sum + normalizeStudyProgressHistory(language.progressHistory).reduce((entrySum, entry) => {
-          if (entry.date !== dateKey) return entrySum;
-          return entrySum + Number(entry.learned || 0) + Number(entry.forgotten || 0);
-        }, 0);
-      }, 0);
-      const conceptEvents = study.conceptCategories.reduce((sum, category) => {
-        return sum + normalizeStudyConceptProgressHistory(category.conceptProgressHistory).reduce((entrySum, entry) => {
-          if (entry.date !== dateKey) return entrySum;
-          return entrySum + Number(entry.learned || 0) + Number(entry.forgotten || 0);
-        }, 0);
-      }, 0);
-      return wordEvents + conceptEvents;
+      return getDevelopmentCache().studyEventsByDate.get(dateKey) || 0;
     }
+
 
     function getStudyWordLessonsForDateKey(dateKey) {
-      normalizeStudy();
-      return study.languages.reduce((sum, language) => {
-        return sum + normalizeStudyProgressHistory(language.progressHistory).reduce((entrySum, entry) => {
-          if (entry.date !== dateKey) return entrySum;
-          return entrySum + Number(entry.lessons || 0);
-        }, 0);
-      }, 0);
+      return getDevelopmentCache().wordLessonsByDate.get(dateKey) || 0;
     }
 
+
     function getStudyConceptLessonsForDateKey(dateKey) {
-      normalizeStudy();
-      return study.conceptCategories.reduce((sum, category) => {
-        return sum + normalizeStudyConceptProgressHistory(category.conceptProgressHistory).reduce((entrySum, entry) => {
-          if (entry.date !== dateKey) return entrySum;
-          return entrySum + Number(entry.lessons || 0);
-        }, 0);
-      }, 0);
+      return getDevelopmentCache().conceptLessonsByDate.get(dateKey) || 0;
     }
+
 
     function getStudyLessonsForDateKey(dateKey) {
       return getStudyWordLessonsForDateKey(dateKey) + getStudyConceptLessonsForDateKey(dateKey);
     }
 
     function getStudyActivityForDateKey(dateKey) {
-      normalizeStudy();
-      const wordActivity = study.languages.reduce((sum, language) => {
-        return sum + normalizeStudyProgressHistory(language.progressHistory).reduce((entrySum, entry) => {
-          if (entry.date !== dateKey) return entrySum;
-          return entrySum + Number(entry.learned || 0) * 12 + Number(entry.forgotten || 0) * 4;
-        }, 0);
-      }, 0);
-      const conceptActivity = study.conceptCategories.reduce((sum, category) => {
-        return sum + normalizeStudyConceptProgressHistory(category.conceptProgressHistory).reduce((entrySum, entry) => {
-          if (entry.date !== dateKey) return entrySum;
-          return entrySum + Number(entry.learned || 0) * 12 + Number(entry.forgotten || 0) * 4;
-        }, 0);
-      }, 0);
-      return wordActivity + conceptActivity;
+      return getDevelopmentCache().studyActivityByDate.get(dateKey) || 0;
     }
+
 
     function getLocalDateFromKey(dateKey) {
       const parts = String(dateKey || "").split("-").map(Number);
@@ -9948,40 +10281,32 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function getStudyLessonCountFromDateKey(minDateKey) {
-      normalizeStudy();
-      const wordLessons = study.languages.reduce((sum, language) => {
-        return sum + normalizeStudyProgressHistory(language.progressHistory).reduce((entrySum, entry) => {
-          if (minDateKey && entry.date < minDateKey) return entrySum;
-          return entrySum + Number(entry.lessons || 0);
-        }, 0);
+      const cache = getDevelopmentCache();
+      return cache.studyLessonEntries.reduce((sum, entry) => {
+        if (minDateKey && entry.date < minDateKey) return sum;
+        return sum + Number(entry.lessons || 0);
       }, 0);
-      const conceptLessons = study.conceptCategories.reduce((sum, category) => {
-        return sum + normalizeStudyConceptProgressHistory(category.conceptProgressHistory).reduce((entrySum, entry) => {
-          if (minDateKey && entry.date < minDateKey) return entrySum;
-          return entrySum + Number(entry.lessons || 0);
-        }, 0);
-      }, 0);
-      return wordLessons + conceptLessons;
     }
+
 
     function getRhythmHabitsForDevelopment() {
-      normalizeHabits();
       // Tryby "Nauka słówek" i "Nauka pojęć" są tylko lustrzanym widokiem nauki.
       // Nie liczą się jako osobny rytm, żeby nie pompować długu, XP ani braków przy wielu znacznikach.
-      return habits.filter(habit => !isTrainingHabit(habit) && !isLearningHabit(habit));
+      return getDevelopmentCache().rhythmHabits;
     }
+
 
     function getRhythmExpectedForDate(date) {
-      const start = getDevelopmentTrackingStartDate();
-      if (date < start) return 0;
-      return getRhythmHabitsForDevelopment().length;
+      const cache = getDevelopmentCache();
+      if (date < cache.trackingStart) return 0;
+      return cache.rhythmHabitCount;
     }
 
+
     function getRhythmDoneForDay(dayNumber) {
-      return getRhythmHabitsForDevelopment().reduce((sum, habit) => {
-        return sum + (uniqueCompleted(habit).includes(dayNumber) ? 1 : 0);
-      }, 0);
+      return getDevelopmentCache().rhythmDoneByDay.get(dayNumber) || 0;
     }
+
 
     function getTrainingExpectedForDate(date) {
       if (date < getDevelopmentTrackingStartDate()) return 0;
@@ -9991,19 +10316,18 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function getTrainingDoneForDate(date) {
-      return getTrainingCompletedCountForDateKey(getDateKey(date));
+      return getDevelopmentCache().trainingDoneByDate.get(getDateKey(date)) || 0;
     }
 
+
     function getStudyExpectedBreakdownForDate(date) {
-      normalizeStudy();
-      if (date < getDevelopmentTrackingStartDate()) {
+      const cache = getDevelopmentCache();
+      if (date < cache.trackingStart) {
         return { wordsExpected: 0, conceptsExpected: 0, totalExpected: 0 };
       }
 
-      const hasWords = study.languages.some(language => Array.isArray(language.words) && language.words.length > 0);
-      const hasConcepts = study.conceptCategories.some(category => Array.isArray(category.concepts) && category.concepts.length > 0);
-      const wordsExpected = hasWords ? getDevelopmentStudyWordLessonsPerDay() : 0;
-      const conceptsExpected = hasConcepts ? getDevelopmentStudyConceptLessonsPerDay() : 0;
+      const wordsExpected = cache.hasWords ? getDevelopmentStudyWordLessonsPerDay() : 0;
+      const conceptsExpected = cache.hasConcepts ? getDevelopmentStudyConceptLessonsPerDay() : 0;
 
       return {
         wordsExpected,
@@ -10011,6 +10335,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         totalExpected: wordsExpected + conceptsExpected
       };
     }
+
 
     function getStudyLessonBreakdownForDate(date) {
       const dateKey = getDateKey(date);
@@ -10042,51 +10367,9 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function getDevelopmentTrackingStartDate() {
-      const dates = [];
-      const currentYear = new Date().getFullYear();
-
-      habits.forEach(habit => {
-        uniqueCompleted(habit).forEach(dayNumber => {
-          const date = dateFromDayOfYear(dayNumber);
-          if (date.getFullYear() === currentYear) dates.push(date);
-        });
-      });
-
-      normalizeStudy();
-      study.languages.forEach(language => {
-        normalizeStudyProgressHistory(language.progressHistory).forEach(entry => {
-          const date = getLocalDateFromKey(entry.date);
-          if (date && date.getFullYear() === currentYear) dates.push(date);
-        });
-      });
-
-      study.conceptCategories.forEach(category => {
-        normalizeStudyConceptProgressHistory(category.conceptProgressHistory).forEach(entry => {
-          const date = getLocalDateFromKey(entry.date);
-          if (date && date.getFullYear() === currentYear) dates.push(date);
-        });
-      });
-
-      normalizeTraining();
-      training.days.forEach(day => {
-        (day.exercises || []).forEach(exercise => {
-          (exercise.completed || []).forEach(dateKey => {
-            const date = getLocalDateFromKey(dateKey);
-            if (date && date.getFullYear() === currentYear) dates.push(date);
-          });
-        });
-      });
-
-      if (!dates.length) {
-        const today = new Date();
-        today.setHours(12, 0, 0, 0);
-        return today;
-      }
-
-      const first = dates.sort((a, b) => a - b)[0];
-      first.setHours(12, 0, 0, 0);
-      return first;
+      return new Date(getDevelopmentCache().trackingStart);
     }
+
 
     function getDevelopmentDayData(date) {
       const normalizedDate = new Date(date);
@@ -10399,6 +10682,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function renderDevelopment() {
+      if (!isViewActive("habit")) return;
       if (!developmentChart) return;
 
       const studyStats = getAllStudyStats();
@@ -10822,7 +11106,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       trainingDayNameInput.value = "";
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -10848,7 +11132,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -10865,7 +11149,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       openedExerciseKey = null;
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -10905,7 +11189,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -10925,7 +11209,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       exercise.completed = [...new Set(exercise.completed)].sort();
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -10968,7 +11252,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       openedExerciseKey = null;
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -10982,7 +11266,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       openedExerciseKey = null;
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
@@ -11087,13 +11371,13 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       openedExerciseKey = null;
       saveTraining();
       renderTraining();
-      renderHabits();
+      scheduleRenderHabits();
       renderDevelopment();
     }
 
     function toggleEdit(index) {
       openedEditIndex = openedEditIndex === index ? null : index;
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function saveHabitEdit(index) {
@@ -11114,7 +11398,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       openedEditIndex = null;
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function toggleTrainingHabitDay(index, dayNumber) {
@@ -11134,7 +11418,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       habit.completed = uniqueCompleted(habit);
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function toggleToday(index) {
@@ -11162,7 +11446,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       habit.completed = uniqueCompleted(habit);
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function resetHabit(index) {
@@ -11175,7 +11459,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       habit.completed = [];
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function addHabit() {
@@ -11189,7 +11473,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       });
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
       switchView("settings");
     }
 
@@ -11210,7 +11494,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
       switchView("settings");
     }
 
@@ -11222,7 +11506,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       });
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
     }
 
     function resetStudyWordsData() {
@@ -11357,7 +11641,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       else if (openedEditIndex === target) openedEditIndex = index;
 
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
       renderSettingsInfo();
       renderDevelopment();
     }
@@ -11376,7 +11660,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       habits.splice(index, 1);
       openedEditIndex = null;
       saveHabits();
-      renderHabits();
+      scheduleRenderHabits();
       renderSettingsInfo();
       renderDevelopment();
     }
@@ -11441,7 +11725,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (viewName === "one") {
         headerSubtitle.textContent = "Rytm dnia • dzisiejsze cele i bilans";
-        renderHabits();
+        scheduleRenderHabits();
       }
 
       if (viewName === "study") {
@@ -12310,7 +12594,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       currentStudyConceptSession = null;
       unlockedNoteFolders = new Set();
 
-      renderHabits();
+      scheduleRenderHabits();
       renderNotes();
       renderStudy();
       renderTraining();
@@ -13016,7 +13300,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         renderDevelopment();
 
         if (document.getElementById("view-habit").classList.contains("active")) {
-          renderHabits();
+          scheduleRenderHabits();
         }
       }, 60000);
     }
@@ -13044,11 +13328,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     saveTraining();
     syncProfileWeightFromLatest();
     setWeightDateNow();
-    renderHabits();
-    renderNotes();
-    renderStudy();
-    renderTraining();
-    renderWeight();
+    // Start bez renderowania ukrytych zakładek. Cięższe listy ładują się dopiero po wejściu w daną podstronę.
     renderSettingsInfo();
     renderDashboard();
     renderDevelopment();
