@@ -2614,6 +2614,33 @@
       font-size: 18px;
     }
 
+    .modal-head-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .modal-end-session {
+      height: 42px;
+      padding: 0 13px;
+      border-radius: 14px;
+      background: rgba(255, 107, 107, 0.12);
+      color: #ffb4b4;
+      border: 1px solid rgba(255, 107, 107, 0.34);
+      box-shadow: none;
+      font-size: 13px;
+      font-weight: 900;
+    }
+
+    .modal-end-session:hover {
+      filter: brightness(1.08);
+    }
+
+    .modal-end-session[hidden] {
+      display: none;
+    }
+
     .quiz-question-card {
       display: grid;
       gap: 12px;
@@ -3328,6 +3355,14 @@
         width: 36px;
         height: 36px;
         border-radius: 12px;
+      }
+
+
+      .modal-end-session {
+        height: 36px;
+        padding: 0 10px;
+        border-radius: 12px;
+        font-size: 12px;
       }
 
       .quiz-question-card {
@@ -4131,7 +4166,10 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             <h3 class="modal-title" id="studyQuizModalTitle">Nauka turami</h3>
             <p class="muted" id="studyQuizModeInfo" style="margin: 0;">Odpowiedz na pytanie. Po błędzie musisz wpisać poprawną wersję — dopiero wtedy quiz przejdzie dalej.</p>
           </div>
-          <button class="modal-close" onclick="closeStudyQuizModal()" aria-label="Zamknij quiz">×</button>
+          <div class="modal-head-actions">
+            <button class="modal-end-session" id="studyQuizEndButton" onclick="endStudyQuizSessionManually()" hidden>Zakończ</button>
+            <button class="modal-close" onclick="closeStudyQuizModal()" aria-label="Zminimalizuj quiz">×</button>
+          </div>
         </div>
 
         <div class="quiz-question-card">
@@ -4163,7 +4201,10 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             <h3 class="modal-title" id="studyConceptQuizModalTitle">Quiz pojęć</h3>
             <p class="muted" id="studyConceptQuizModeInfo" style="margin: 0;">Wpisz definicję własnymi słowami, pokaż wzór i oceń odpowiedź ręcznie.</p>
           </div>
-          <button class="modal-close" onclick="closeStudyConceptQuizModal()" aria-label="Zamknij quiz pojęć">×</button>
+          <div class="modal-head-actions">
+            <button class="modal-end-session" id="studyConceptQuizEndButton" onclick="endStudyConceptQuizSessionManually()" hidden>Zakończ</button>
+            <button class="modal-close" onclick="closeStudyConceptQuizModal()" aria-label="Zminimalizuj quiz pojęć">×</button>
+          </div>
         </div>
 
         <div class="quiz-question-card">
@@ -4983,6 +5024,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const noteFoldersStorageKey = "habit-pixel-note-folders";
     const noteFolderPasswordStorageKey = "habit-pixel-note-folder-passwords";
     const studyStorageKey = "habit-pixel-study";
+    const studyRuntimeStorageKey = "habit-pixel-study-runtime-state";
     const studyConceptTopicFilterStorageKey = "habit-pixel-study-concept-topic-filter";
     const trainingStorageKey = "habit-pixel-training";
     const developmentDebtSettingsStorageKey = "habit-pixel-development-debt-settings";
@@ -5368,6 +5410,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const studyQuizCheckButton = document.getElementById("studyQuizCheckButton");
     const studyQuizDontKnowButton = document.getElementById("studyQuizDontKnowButton");
     const studyQuizStatusNote = document.getElementById("studyQuizStatusNote");
+    const studyQuizEndButton = document.getElementById("studyQuizEndButton");
     const studyWordsToggleButton = document.getElementById("studyWordsToggleButton");
     const studyWordsList = document.getElementById("studyWordsList");
     const studyTabWords = document.getElementById("studyTabWords");
@@ -5395,6 +5438,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const studyConceptQuizDontKnowButton = document.getElementById("studyConceptQuizDontKnowButton");
     const studyConceptManualButtons = document.getElementById("studyConceptManualButtons");
     const studyConceptQuizStatusNote = document.getElementById("studyConceptQuizStatusNote");
+    const studyConceptQuizEndButton = document.getElementById("studyConceptQuizEndButton");
     const studyProgressChart = document.getElementById("studyProgressChart");
     const studyProgressInfo = document.getElementById("studyProgressInfo");
     const studyConceptProgressBox = document.getElementById("studyConceptProgressBox");
@@ -6386,8 +6430,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       });
 
       if (studyBulkImportInput) studyBulkImportInput.value = "";
-      currentStudyQuiz = null;
-      currentStudySession = null;
+      persistStudyRuntimeState();
       saveStudy();
       renderStudy();
       alert(`Import zakończony. Dodano: ${added}. Pominięto: ${skipped}.`);
@@ -6466,8 +6509,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       });
 
       if (studyConceptBulkImportInput) studyConceptBulkImportInput.value = "";
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      persistStudyRuntimeState();
       saveStudy();
       renderStudy();
       alert(`Import pojęć zakończony. Dodano: ${added}. Pominięto: ${skipped}.`);
@@ -6742,6 +6784,241 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
     }
 
+    function getNormalizedStudyMode(mode) {
+      return mode === "review" ? "review" : "learn";
+    }
+
+    function findStudyLanguageById(languageId) {
+      normalizeStudy();
+      return study.languages.find(language => language.id === languageId) || null;
+    }
+
+    function sanitizeStudyWordRuntime(session, quiz) {
+      if (!session || typeof session !== "object") return { session: null, quiz: null };
+      const language = findStudyLanguageById(session.languageId);
+      if (!language) return { session: null, quiz: null };
+
+      session.queue = Array.isArray(session.queue) ? session.queue.filter(item => item && item.wordId) : [];
+      session.batchWordIds = Array.isArray(session.batchWordIds) ? session.batchWordIds.filter(Boolean) : [];
+      session.stats = session.stats && typeof session.stats === "object" ? session.stats : {};
+      session.index = Math.max(0, Math.min(Number(session.index) || 0, session.queue.length));
+      session.repetitions = Math.max(1, Number(session.repetitions) || (session.mode === "review" ? 2 : 4));
+      session.sessionCorrect = Math.max(0, Number(session.sessionCorrect) || 0);
+      session.sessionWrong = Math.max(0, Number(session.sessionWrong) || 0);
+      session.mode = getNormalizedStudyMode(session.mode);
+      session.finished = Boolean(session.finished);
+
+      let safeQuiz = null;
+      if (quiz && typeof quiz === "object" && getStudyWordById(language, quiz.wordId)) {
+        safeQuiz = {
+          languageId: language.id,
+          wordId: quiz.wordId,
+          direction: quiz.direction === "target-to-source" ? "target-to-source" : "source-to-target",
+          answered: Boolean(quiz.answered),
+          wrongCounted: Boolean(quiz.wrongCounted),
+          typoChanceUsed: Boolean(quiz.typoChanceUsed),
+          mode: getNormalizedStudyMode(quiz.mode || session.mode)
+        };
+      }
+
+      return { session, quiz: safeQuiz };
+    }
+
+    function sanitizeStudyConceptRuntime(session, quiz) {
+      if (!session || typeof session !== "object") return { session: null, quiz: null };
+      const language = findStudyConceptCategoryById(session.languageId);
+      if (!language) return { session: null, quiz: null };
+
+      session.conceptIds = Array.isArray(session.conceptIds) ? session.conceptIds.filter(Boolean) : [];
+      session.queue = Array.isArray(session.queue) ? session.queue.filter(Boolean) : [];
+      session.stats = session.stats && typeof session.stats === "object" ? session.stats : {};
+      session.index = Math.max(0, Math.min(Number(session.index) || 0, session.queue.length));
+      session.sessionCorrect = Math.max(0, Number(session.sessionCorrect) || 0);
+      session.sessionPartial = Math.max(0, Number(session.sessionPartial) || 0);
+      session.sessionWrong = Math.max(0, Number(session.sessionWrong) || 0);
+      session.learned = Math.max(0, Number(session.learned) || 0);
+      session.forgotten = Math.max(0, Number(session.forgotten) || 0);
+      session.mode = getNormalizedStudyMode(session.mode);
+      session.finished = Boolean(session.finished);
+      session.summaryHtml = String(session.summaryHtml || "");
+
+      let safeQuiz = null;
+      if (quiz && typeof quiz === "object" && getStudyConceptById(language, quiz.conceptId)) {
+        safeQuiz = {
+          languageId: language.id,
+          conceptId: quiz.conceptId,
+          answered: Boolean(quiz.answered),
+          checked: Boolean(quiz.checked),
+          mode: getNormalizedStudyMode(quiz.mode || session.mode)
+        };
+      }
+
+      return { session, quiz: safeQuiz };
+    }
+
+    function persistStudyRuntimeState() {
+      try {
+        const payload = {
+          version: 1,
+          savedAt: new Date().toISOString(),
+          words: currentStudySession ? {
+            session: currentStudySession,
+            quiz: currentStudyQuiz,
+            modalOpen: Boolean(studyQuizModal && studyQuizModal.classList.contains("active"))
+          } : null,
+          concepts: currentStudyConceptSession ? {
+            session: currentStudyConceptSession,
+            quiz: currentStudyConceptQuiz,
+            modalOpen: Boolean(studyConceptQuizModal && studyConceptQuizModal.classList.contains("active"))
+          } : null
+        };
+
+        if (!payload.words && !payload.concepts) {
+          localStorage.removeItem(studyRuntimeStorageKey);
+          return;
+        }
+
+        localStorage.setItem(studyRuntimeStorageKey, JSON.stringify(payload));
+      } catch (error) {
+        console.warn("Nie udało się zapisać aktywnej tury nauki.", error);
+      }
+    }
+
+    function clearStudyWordRuntimeState() {
+      clearTimeout(studyCorrectAutoNextTimer);
+      currentStudyQuiz = null;
+      currentStudySession = null;
+      persistStudyRuntimeState();
+    }
+
+    function clearStudyConceptRuntimeState() {
+      currentStudyConceptQuiz = null;
+      currentStudyConceptSession = null;
+      persistStudyRuntimeState();
+    }
+
+    function clearAllStudyRuntimeState() {
+      clearTimeout(studyCorrectAutoNextTimer);
+      currentStudyQuiz = null;
+      currentStudySession = null;
+      currentStudyConceptQuiz = null;
+      currentStudyConceptSession = null;
+      persistStudyRuntimeState();
+    }
+
+    function refreshStudySessionEndButtons() {
+      if (studyQuizEndButton) {
+        studyQuizEndButton.hidden = !(currentStudySession && !currentStudySession.finished);
+      }
+      if (studyConceptQuizEndButton) {
+        studyConceptQuizEndButton.hidden = !(currentStudyConceptSession && !currentStudyConceptSession.finished);
+      }
+    }
+
+    function endStudyQuizSessionManually() {
+      if (!currentStudySession || currentStudySession.finished) {
+        closeStudyQuizModal();
+        return;
+      }
+
+      clearStudyWordRuntimeState();
+      if (studyQuizAnswerInput) studyQuizAnswerInput.value = "";
+      if (studyQuizResult) {
+        studyQuizResult.className = "study-result";
+        studyQuizResult.textContent = "";
+      }
+      closeStudyQuizModal();
+      renderStudy();
+      renderStudyQuiz();
+      refreshStudySessionEndButtons();
+    }
+
+    function endStudyConceptQuizSessionManually() {
+      if (!currentStudyConceptSession || currentStudyConceptSession.finished) {
+        closeStudyConceptQuizModal();
+        return;
+      }
+
+      clearStudyConceptRuntimeState();
+      if (studyConceptQuizAnswerInput) studyConceptQuizAnswerInput.value = "";
+      if (studyConceptQuizResult) {
+        studyConceptQuizResult.className = "study-result";
+        studyConceptQuizResult.textContent = "";
+      }
+      if (studyConceptManualButtons) studyConceptManualButtons.classList.remove("active");
+      closeStudyConceptQuizModal();
+      renderStudy();
+      renderStudyConceptQuiz();
+      refreshStudySessionEndButtons();
+    }
+
+    function readStudyRuntimeState() {
+      try {
+        return JSON.parse(localStorage.getItem(studyRuntimeStorageKey) || "null") || null;
+      } catch (error) {
+        localStorage.removeItem(studyRuntimeStorageKey);
+        return null;
+      }
+    }
+
+    function restoreStudyRuntimeState() {
+      const payload = readStudyRuntimeState();
+      if (!payload || typeof payload !== "object") return null;
+
+      const words = payload.words || null;
+      if (words) {
+        const safe = sanitizeStudyWordRuntime(words.session, words.quiz);
+        currentStudySession = safe.session;
+        currentStudyQuiz = safe.quiz;
+      }
+
+      const concepts = payload.concepts || null;
+      if (concepts) {
+        const safe = sanitizeStudyConceptRuntime(concepts.session, concepts.quiz);
+        currentStudyConceptSession = safe.session;
+        currentStudyConceptQuiz = safe.quiz;
+      }
+
+      if (currentStudySession && !currentStudySession.finished && !currentStudyQuiz) {
+        startStudyQuiz({ force: true });
+      }
+
+      if (currentStudyConceptSession && !currentStudyConceptSession.finished && !currentStudyConceptQuiz) {
+        startStudyConceptQuiz({ force: true });
+      }
+
+      persistStudyRuntimeState();
+      return payload;
+    }
+
+    function restoreStudyRuntimeModals(payload) {
+      const state = payload || readStudyRuntimeState();
+      if (!state || typeof state !== "object") return;
+
+      const shouldOpenWordModal = Boolean(state.words && state.words.modalOpen && currentStudySession && !currentStudySession.finished);
+      const shouldOpenConceptModal = Boolean(state.concepts && state.concepts.modalOpen && currentStudyConceptSession && !currentStudyConceptSession.finished && !shouldOpenWordModal);
+
+      if (shouldOpenWordModal && studyQuizModal) {
+        ensureStudyQuizModalRoot();
+        studyQuizModal.classList.add("active");
+        studyQuizModal.setAttribute("aria-hidden", "false");
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        renderStudyQuiz();
+      }
+
+      if (shouldOpenConceptModal && studyConceptQuizModal) {
+        ensureStudyConceptQuizModalRoot();
+        studyConceptQuizModal.classList.add("active");
+        studyConceptQuizModal.setAttribute("aria-hidden", "false");
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";
+        renderStudyConceptQuiz();
+      }
+
+      persistStudyRuntimeState();
+    }
+
     function getSelectedStudyLanguage() {
       normalizeStudy();
       return study.languages.find(language => language.id === study.selectedLanguageId) || null;
@@ -6774,12 +7051,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     function setActiveStudySelectedId(categoryId) {
       if (isStudyConceptTabActive()) {
         study.selectedConceptCategoryId = categoryId || "";
-        currentStudyConceptQuiz = null;
-        currentStudyConceptSession = null;
       } else {
         study.selectedLanguageId = categoryId || "";
-        currentStudyQuiz = null;
-        currentStudySession = null;
       }
     }
 
@@ -6826,10 +7099,6 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       if (studyLanguageNameInput) studyLanguageNameInput.value = "";
-      currentStudyQuiz = null;
-      currentStudySession = null;
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
       saveStudy();
       renderStudy();
     }
@@ -6850,13 +7119,11 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (activeConcepts) {
         study.conceptCategories = study.conceptCategories.filter(item => item.id !== category.id);
         study.selectedConceptCategoryId = study.conceptCategories[0] ? study.conceptCategories[0].id : "";
-        currentStudyConceptQuiz = null;
-        currentStudyConceptSession = null;
+        if (currentStudyConceptSession && currentStudyConceptSession.languageId === category.id) clearStudyConceptRuntimeState();
       } else {
         study.languages = study.languages.filter(item => item.id !== category.id);
         study.selectedLanguageId = study.languages[0] ? study.languages[0].id : "";
-        currentStudyQuiz = null;
-        currentStudySession = null;
+        if (currentStudySession && currentStudySession.languageId === category.id) clearStudyWordRuntimeState();
       }
 
       saveStudy();
@@ -6903,8 +7170,6 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (studyWordInput) studyWordInput.value = "";
       if (studyTranslationInput) studyTranslationInput.value = "";
-      currentStudyQuiz = null;
-      currentStudySession = null;
       saveStudy();
       renderStudy();
     }
@@ -6914,9 +7179,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (!language || !language.words[wordIndex]) return;
 
       if (!confirm("Usunąć to słówko?")) return;
+      const removedWordId = language.words[wordIndex].id;
       language.words.splice(wordIndex, 1);
-      currentStudyQuiz = null;
-      currentStudySession = null;
+      if (currentStudySession && currentStudySession.languageId === language.id && currentStudyQuiz && currentStudyQuiz.wordId === removedWordId) {
+        currentStudyQuiz = null;
+      }
+      persistStudyRuntimeState();
       saveStudy();
       renderStudy();
     }
@@ -6990,10 +7258,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
     function setStudyTab(tab) {
       localStorage.setItem(studyActiveTabStorageKey, tab === "concepts" ? "concepts" : "words");
-      currentStudyQuiz = null;
-      currentStudySession = null;
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      persistStudyRuntimeState();
       renderStudyTabs();
       renderStudy();
     }
@@ -7197,8 +7462,6 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (studyConceptTermInput) studyConceptTermInput.value = "";
       if (studyConceptDefinitionInput) studyConceptDefinitionInput.value = "";
       if (studyConceptBulkImportInput) studyConceptBulkImportInput.value = "";
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
       saveStudy();
       renderStudy();
     }
@@ -7207,9 +7470,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       const language = getSelectedStudyConceptCategory();
       if (!language || !Array.isArray(language.concepts) || !language.concepts[conceptIndex]) return;
       if (!confirm("Usunąć to pojęcie?")) return;
+      const removedConceptId = language.concepts[conceptIndex].id;
       language.concepts.splice(conceptIndex, 1);
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      if (currentStudyConceptSession && currentStudyConceptSession.languageId === language.id && currentStudyConceptQuiz && currentStudyConceptQuiz.conceptId === removedConceptId) {
+        currentStudyConceptQuiz = null;
+      }
+      persistStudyRuntimeState();
       saveStudy();
       renderStudy();
     }
@@ -7228,8 +7494,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         learned: !wasRemembered && concept.remembered ? 1 : 0,
         forgotten: wasRemembered && !concept.remembered ? 1 : 0
       });
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      persistStudyRuntimeState();
       saveStudy();
       renderStudy();
     }
@@ -7319,8 +7584,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     function setStudyConceptTopicFilter(value) {
       selectedStudyConceptTopic = value && value !== "all" ? normalizeStudyTopic(value) : "all";
       localStorage.setItem(studyConceptTopicFilterStorageKey, selectedStudyConceptTopic);
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      persistStudyRuntimeState();
       renderStudy();
     }
 
@@ -7406,8 +7670,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       ensureStudyConceptQuizModalRoot();
       studyModalSavedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
 
-      if (!currentStudyConceptSession || currentStudyConceptSession.finished || currentStudyConceptSession.mode !== (mode === "review" ? "review" : "learn")) {
-        const started = startStudyConceptSession(mode);
+      const requestedMode = getNormalizedStudyMode(mode);
+      const hasRunningSession = Boolean(currentStudyConceptSession && !currentStudyConceptSession.finished);
+      const blockedModeSwitch = hasRunningSession && currentStudyConceptSession.mode !== requestedMode;
+
+      if (!currentStudyConceptSession || currentStudyConceptSession.finished) {
+        const started = startStudyConceptSession(requestedMode);
         if (!started) return;
       } else if (!currentStudyConceptQuiz) {
         startStudyConceptQuiz({ force: true });
@@ -7418,6 +7686,14 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
       renderStudyConceptQuiz();
+
+      if (blockedModeSwitch && studyConceptQuizStatusNote) {
+        studyConceptQuizStatusNote.textContent = currentStudyConceptSession.mode === "review"
+          ? "Masz już aktywną powtórkę pojęć. Nie nadpisuję jej nową turą — dokończ ją albo zamknij okno i wróć później."
+          : "Masz już aktywną turę pojęć. Nie nadpisuję jej powtórką — dokończ ją albo zamknij okno i wróć później.";
+      }
+
+      persistStudyRuntimeState();
     }
 
     function closeStudyConceptQuizModal() {
@@ -7429,6 +7705,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (Number.isFinite(studyModalSavedScrollY)) {
         window.scrollTo(0, studyModalSavedScrollY);
       }
+      persistStudyRuntimeState();
     }
 
     function handleStudyConceptQuizBackdropClick(event) {
@@ -7436,7 +7713,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function startStudyConceptQuiz(options = {}) {
-      const language = getSelectedStudyConceptCategory();
+      const language = currentStudyConceptSession ? findStudyConceptCategoryById(currentStudyConceptSession.languageId) : getSelectedStudyConceptCategory();
       if (!currentStudyConceptSession || currentStudyConceptSession.finished) {
         if (!startStudyConceptSession(options.mode || "learn")) return;
         return;
@@ -7451,8 +7728,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       if (!language || language.id !== currentStudyConceptSession.languageId) {
-        currentStudyConceptSession = null;
-        currentStudyConceptQuiz = null;
+        clearStudyConceptRuntimeState();
         renderStudyConceptQuiz();
         return;
       }
@@ -7480,6 +7756,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (studyConceptQuizAnswerInput) studyConceptQuizAnswerInput.value = "";
       renderStudyConceptQuiz();
+      persistStudyRuntimeState();
     }
 
     function getCurrentStudyConceptQuizContext() {
@@ -7493,6 +7770,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function renderStudyConceptQuiz(options = {}) {
+      refreshStudySessionEndButtons();
       if (!studyConceptQuizPrompt || !studyConceptQuizResult) return;
       const keepResult = Boolean(options.keepResult);
       if (!keepResult) {
@@ -7568,6 +7846,10 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (studyConceptQuizCheckButton) studyConceptQuizCheckButton.disabled = Boolean(currentStudyConceptQuiz.answered);
       if (studyConceptQuizDontKnowButton) studyConceptQuizDontKnowButton.disabled = Boolean(currentStudyConceptQuiz.answered);
       if (currentStudyConceptQuiz.checked && studyConceptManualButtons) studyConceptManualButtons.classList.add("active");
+      if (!keepResult && currentStudyConceptQuiz.checked && !currentStudyConceptQuiz.answered && studyConceptQuizResult) {
+        studyConceptQuizResult.className = "study-result active";
+        studyConceptQuizResult.innerHTML = `Wzorcowa definicja:<br><b>${escapeHTML(concept.definition)}</b>`;
+      }
       if (studyConceptQuizStatusNote) studyConceptQuizStatusNote.textContent = currentStudyConceptQuiz.answered
         ? "Ocena zapisana. Możesz przejść dalej."
         : "Wpisz odpowiedź, sprawdź zgodność i wybierz ręczną ocenę.";
@@ -7590,6 +7872,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
       if (studyConceptManualButtons) studyConceptManualButtons.classList.add("active");
       if (studyConceptQuizStatusNote) studyConceptQuizStatusNote.textContent = "Porównaj odpowiedź ze wzorem i oceń ręcznie.";
+      persistStudyRuntimeState();
     }
 
     function showStudyConceptAnswer() {
@@ -7606,6 +7889,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
       if (studyConceptManualButtons) studyConceptManualButtons.classList.add("active");
       if (studyConceptQuizStatusNote) studyConceptQuizStatusNote.textContent = "Wybierz: umiem, częściowo albo nie umiem.";
+      persistStudyRuntimeState();
     }
 
     function gradeStudyConceptQuiz(result) {
@@ -7660,6 +7944,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       renderStudyConceptQuiz({ keepResult: true });
       renderStudyConceptsOnly();
       renderStudyReviewInfo();
+      persistStudyRuntimeState();
     }
 
     function finishStudyConceptSession() {
@@ -7683,6 +7968,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       saveStudy();
       renderStudy();
       renderStudyConceptQuiz();
+      persistStudyRuntimeState();
     }
 
     function handleStudyConceptQuizKey(event) {
@@ -8039,8 +8325,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       ensureStudyQuizModalRoot();
       studyModalSavedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
 
-      if (!currentStudySession || currentStudySession.finished || (mode && currentStudySession.mode !== (mode === "review" ? "review" : "learn"))) {
-        const started = startStudySession(mode);
+      const requestedMode = getNormalizedStudyMode(mode);
+      const hasRunningSession = Boolean(currentStudySession && !currentStudySession.finished);
+      const blockedModeSwitch = hasRunningSession && currentStudySession.mode !== requestedMode;
+
+      if (!currentStudySession || currentStudySession.finished) {
+        const started = startStudySession(requestedMode);
         if (!started) return;
       } else if (!currentStudyQuiz) {
         startStudyQuiz({ force: true });
@@ -8051,6 +8341,14 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       document.documentElement.style.overflow = "hidden";
       document.body.style.overflow = "hidden";
       renderStudyQuiz();
+
+      if (blockedModeSwitch && studyQuizStatusNote) {
+        studyQuizStatusNote.textContent = currentStudySession.mode === "review"
+          ? "Masz już aktywną przypominajkę. Nie nadpisuję jej nową turą — dokończ ją albo zamknij okno i wróć później."
+          : "Masz już aktywną turę nauki. Nie nadpisuję jej przypominajką — dokończ ją albo zamknij okno i wróć później.";
+      }
+
+      persistStudyRuntimeState();
     }
 
     function closeStudyQuizModal() {
@@ -8062,6 +8360,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (Number.isFinite(studyModalSavedScrollY)) {
         window.scrollTo(0, studyModalSavedScrollY);
       }
+      persistStudyRuntimeState();
     }
 
     function handleStudyQuizBackdropClick(event) {
@@ -8070,7 +8369,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
     function startStudyQuiz(options = {}) {
       const force = Boolean(options.force);
-      const language = getSelectedStudyLanguage();
+      const language = currentStudySession ? findStudyLanguageById(currentStudySession.languageId) : getSelectedStudyLanguage();
 
       if (!currentStudySession || currentStudySession.finished) {
         if (!startStudySession(options.mode || "learn")) return;
@@ -8086,8 +8385,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       if (!language || language.id !== currentStudySession.languageId) {
-        currentStudySession = null;
-        currentStudyQuiz = null;
+        clearStudyWordRuntimeState();
         renderStudyQuiz();
         return;
       }
@@ -8120,9 +8418,11 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (studyQuizAnswerInput) studyQuizAnswerInput.value = "";
       renderStudyQuiz();
+      persistStudyRuntimeState();
     }
 
     function renderStudyQuiz(options = {}) {
+      refreshStudySessionEndButtons();
       if (!studyQuizPrompt || !studyQuizResult) return;
 
       const keepResult = Boolean(options.keepResult);
@@ -8224,6 +8524,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             : `Do nauki: ${toLearn}. Słowa zapamiętane nie pojawiają się w tym trybie.`;
       }
 
+      if (!keepResult && currentStudyQuiz.wrongCounted && !currentStudyQuiz.answered && studyQuizResult) {
+        const expected = currentStudyQuiz.direction === "source-to-target" ? word.target : word.source;
+        studyQuizResult.className = "study-result wrong active";
+        studyQuizResult.innerHTML = `Błąd był już policzony. Poprawna wersja: <b>${escapeHTML(expected)}</b>. Wpisz ją teraz, żeby przejść dalej.`;
+      }
+
       if (!currentStudyQuiz.answered && studyQuizAnswerInput) studyQuizAnswerInput.focus();
     }
 
@@ -8231,8 +8537,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (!currentStudySession) return;
       const language = study.languages.find(item => item.id === currentStudySession.languageId);
       if (!language) {
-        currentStudySession = null;
-        currentStudyQuiz = null;
+        clearStudyWordRuntimeState();
         renderStudyQuiz();
         return;
       }
@@ -8302,6 +8607,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       saveStudy();
       renderStudy();
       renderStudyQuiz();
+      persistStudyRuntimeState();
     }
 
     function getCurrentStudyQuizContext() {
@@ -8352,6 +8658,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       saveStudy({ skipProgressSnapshot: true, skipLinkedRenders: true });
       renderStudyQuiz({ keepResult: true });
       renderStudyWordsOnly();
+      persistStudyRuntimeState();
     }
 
     function checkStudyQuizAnswer() {
@@ -8424,6 +8731,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       saveStudy({ skipProgressSnapshot: true, skipLinkedRenders: true });
       renderStudyQuiz({ keepResult: true });
       renderStudyWordsOnly();
+      persistStudyRuntimeState();
     }
 
     function handleStudyQuizKey(event) {
@@ -8451,8 +8759,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         learned: !wasRemembered && word.remembered ? 1 : 0,
         forgotten: wasRemembered && !word.remembered ? 1 : 0
       });
-      currentStudyQuiz = null;
-      currentStudySession = null;
+      persistStudyRuntimeState();
       saveStudy();
       renderStudy();
     }
@@ -11514,8 +11821,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       study.languages = [];
       study.selectedLanguageId = "";
-      currentStudyQuiz = null;
-      currentStudySession = null;
+      clearStudyWordRuntimeState();
       if (studyBulkImportInput) studyBulkImportInput.value = "";
       if (studyWordInput) studyWordInput.value = "";
       if (studyTranslationInput) studyTranslationInput.value = "";
@@ -11531,8 +11837,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       study.selectedConceptCategoryId = "";
       selectedStudyConceptTopic = "all";
       localStorage.setItem(studyConceptTopicFilterStorageKey, "all");
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      clearStudyConceptRuntimeState();
       if (studyConceptTermInput) studyConceptTermInput.value = "";
       if (studyConceptDefinitionInput) studyConceptDefinitionInput.value = "";
       if (studyConceptKeywordsInput) studyConceptKeywordsInput.value = "";
@@ -11547,10 +11852,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (!confirm("Reset danych: usunąć wszystkie kategorie nauki, słówka, pojęcia i statystyki quizu? Tej operacji nie da się cofnąć bez kopii zapasowej.")) return;
 
       study = createDefaultStudy();
-      currentStudyQuiz = null;
-      currentStudySession = null;
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      clearAllStudyRuntimeState();
       if (studyBulkImportInput) studyBulkImportInput.value = "";
       if (studyWordInput) studyWordInput.value = "";
       if (studyTranslationInput) studyTranslationInput.value = "";
@@ -12588,10 +12890,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       openedEditIndex = null;
       openedNoteIndex = null;
       openedExerciseKey = null;
-      currentStudyQuiz = null;
-      currentStudySession = null;
-      currentStudyConceptQuiz = null;
-      currentStudyConceptSession = null;
+      clearAllStudyRuntimeState();
       unlockedNoteFolders = new Set();
 
       scheduleRenderHabits();
@@ -13326,12 +13625,14 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     saveNotes();
     saveStudy();
     saveTraining();
+    const restoredStudyRuntime = restoreStudyRuntimeState();
     syncProfileWeightFromLatest();
     setWeightDateNow();
     // Start bez renderowania ukrytych zakładek. Cięższe listy ładują się dopiero po wejściu w daną podstronę.
     renderSettingsInfo();
     renderDashboard();
     renderDevelopment();
+    restoreStudyRuntimeModals(restoredStudyRuntime);
     appReadyForAutoSync = true;
     updateDriveAutoSyncUi();
     startDriveAutoSyncLoop();
