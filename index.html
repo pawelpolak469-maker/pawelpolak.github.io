@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v51 optymalizacja dużych danych</title>
+  <title>Habit Pixel v52 mobile nauka kompakt</title>
 
   <style>
     :root {
@@ -3894,6 +3894,238 @@
       }
     }
 
+
+
+    /* v52: Telefon + klawiatura ekranowa — kompaktowe okno nauki słówek i pojęć */
+    :root {
+      --study-visual-height: 100dvh;
+    }
+
+    .quiz-meta-line {
+      margin-top: 8px;
+      color: var(--muted);
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+    }
+
+    @media (max-width: 600px) {
+      #studyQuizModal.modal-backdrop,
+      #studyConceptQuizModal.modal-backdrop {
+        height: var(--study-visual-height, 100dvh);
+        min-height: 0;
+        align-items: start;
+        place-items: start center;
+        padding: 6px 8px;
+      }
+
+      #studyQuizModal .modal-card,
+      #studyConceptQuizModal .modal-card {
+        width: 100%;
+        max-height: calc(var(--study-visual-height, 100dvh) - 12px);
+        margin: 0 auto;
+        padding: 10px;
+        border-radius: 16px;
+      }
+
+      #studyQuizModal .modal-head,
+      #studyConceptQuizModal .modal-head {
+        align-items: center;
+        gap: 7px;
+        margin-bottom: 7px;
+      }
+
+      #studyQuizModal .modal-title,
+      #studyConceptQuizModal .modal-title {
+        margin-bottom: 2px;
+        font-size: 16px;
+        line-height: 1.12;
+      }
+
+      #studyQuizModeInfo,
+      #studyConceptQuizModeInfo {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        font-size: 10.5px;
+        line-height: 1.22;
+      }
+
+      #studyQuizModal .modal-close,
+      #studyConceptQuizModal .modal-close,
+      #studyQuizModal .modal-end-session,
+      #studyConceptQuizModal .modal-end-session {
+        height: 32px;
+        border-radius: 10px;
+      }
+
+      #studyQuizModal .modal-close,
+      #studyConceptQuizModal .modal-close {
+        width: 32px;
+        font-size: 16px;
+      }
+
+      #studyQuizModal .modal-end-session,
+      #studyConceptQuizModal .modal-end-session {
+        padding: 0 9px;
+        font-size: 11px;
+      }
+
+      #studyQuizModal .quiz-question-card,
+      #studyConceptQuizModal .quiz-question-card {
+        gap: 7px;
+        padding: 9px;
+        border-radius: 14px;
+      }
+
+      #studyQuizModal .quiz-session-grid,
+      #studyConceptQuizModal .quiz-session-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 5px;
+        margin-top: 0;
+      }
+
+      #studyQuizModal .quiz-session-chip,
+      #studyConceptQuizModal .quiz-session-chip {
+        min-width: 0;
+        padding: 5px 6px;
+        border-radius: 10px;
+        font-size: 9.5px;
+        line-height: 1.12;
+      }
+
+      #studyQuizModal .quiz-session-chip b,
+      #studyConceptQuizModal .quiz-session-chip b {
+        margin-top: 1px;
+        font-size: 11px;
+        line-height: 1.1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      #studyQuizModal .quiz-meta-line,
+      #studyConceptQuizModal .quiz-meta-line {
+        margin-top: 5px;
+        font-size: 11px;
+        line-height: 1.25;
+      }
+
+      #studyQuizModal .quiz-big-word,
+      #studyConceptQuizModal .quiz-big-word {
+        margin-top: 5px;
+        font-size: clamp(22px, 7.4vw, 32px);
+        line-height: 1.02;
+      }
+
+      #studyQuizModal .field-label,
+      #studyConceptQuizModal .field-label {
+        gap: 4px;
+        font-size: 11px;
+      }
+
+      #studyQuizAnswerInput {
+        min-height: 36px;
+        height: 36px;
+        padding: 7px 9px;
+        font-size: 15px;
+      }
+
+      #studyConceptQuizAnswerInput {
+        min-height: 74px;
+        height: 74px;
+        padding: 8px 9px;
+        font-size: 14px;
+      }
+
+      #studyQuizModal .quiz-control-row,
+      #studyConceptQuizModal .quiz-control-row {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+        gap: 6px;
+        align-items: stretch;
+      }
+
+      #studyQuizModal .quiz-control-row > button,
+      #studyConceptQuizModal .quiz-control-row > button,
+      #studyQuizModal .quiz-answer-buttons button,
+      #studyConceptQuizModal .quiz-answer-buttons button {
+        min-width: 0;
+        width: 100%;
+        padding: 8px 7px;
+        font-size: 11.5px;
+        border-radius: 10px;
+      }
+
+      #studyQuizModal .quiz-answer-buttons,
+      #studyConceptQuizModal .quiz-answer-buttons {
+        width: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        margin-left: 0;
+      }
+
+      #studyQuizModal .study-result,
+      #studyConceptQuizModal .study-result {
+        padding: 8px;
+        border-radius: 11px;
+        font-size: 12px;
+        line-height: 1.32;
+      }
+
+      #studyQuizModal .quiz-status-note,
+      #studyConceptQuizModal .quiz-status-note {
+        font-size: 10.5px;
+        line-height: 1.25;
+      }
+
+      #studyConceptManualButtons.concept-answer-tools.active {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 6px;
+      }
+
+      #studyConceptManualButtons button {
+        min-width: 0;
+        padding: 8px 6px;
+        font-size: 11.5px;
+      }
+
+      body.study-keyboard-open #studyQuizModal .modal-card,
+      body.study-keyboard-open #studyConceptQuizModal .modal-card {
+        max-height: calc(var(--study-visual-height, 100dvh) - 8px);
+        padding: 8px;
+        border-radius: 14px;
+      }
+
+      body.study-keyboard-open #studyQuizModeInfo,
+      body.study-keyboard-open #studyConceptQuizModeInfo {
+        display: none;
+      }
+
+      body.study-keyboard-open #studyQuizModal .modal-head,
+      body.study-keyboard-open #studyConceptQuizModal .modal-head {
+        margin-bottom: 5px;
+      }
+
+      body.study-keyboard-open #studyQuizModal .quiz-question-card,
+      body.study-keyboard-open #studyConceptQuizModal .quiz-question-card {
+        gap: 6px;
+        padding: 8px;
+      }
+
+      body.study-keyboard-open #studyConceptQuizAnswerInput {
+        min-height: 56px;
+        height: 56px;
+      }
+
+      body.study-keyboard-open #studyQuizModal .quiz-status-note,
+      body.study-keyboard-open #studyConceptQuizModal .quiz-status-note {
+        display: none;
+      }
+    }
+
   </style>
 </head>
 
@@ -5446,6 +5678,32 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const studyConceptProgressInfo = document.getElementById("studyConceptProgressInfo");
     const developmentChart = document.getElementById("developmentChart");
     const developmentChartInfo = document.getElementById("developmentChartInfo");
+
+
+    function updateStudyMobileViewportHeight() {
+      const height = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      if (!height || !document.documentElement) return;
+      document.documentElement.style.setProperty("--study-visual-height", `${Math.round(height)}px`);
+    }
+
+    function setStudyKeyboardMode(active) {
+      document.body.classList.toggle("study-keyboard-open", Boolean(active));
+      updateStudyMobileViewportHeight();
+    }
+
+    updateStudyMobileViewportHeight();
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", updateStudyMobileViewportHeight);
+      window.visualViewport.addEventListener("scroll", updateStudyMobileViewportHeight);
+    } else {
+      window.addEventListener("resize", updateStudyMobileViewportHeight);
+    }
+
+    [studyQuizAnswerInput, studyConceptQuizAnswerInput].forEach(input => {
+      if (!input) return;
+      input.addEventListener("focus", () => setStudyKeyboardMode(true));
+      input.addEventListener("blur", () => setTimeout(() => setStudyKeyboardMode(false), 120));
+    });
     const developmentList = document.getElementById("developmentList");
     const devLevel = document.getElementById("devLevel");
     const devXpText = document.getElementById("devXpText");
@@ -7841,7 +8099,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           <div class="quiz-session-chip">Pytanie<b>${currentNo}/${totalNo}</b></div>
           <div class="quiz-session-chip">Termin<b>${escapeHTML(formatStudyDueInfo(concept))}</b></div>
         </div>
-        <div style="margin-top: 10px;">Kategoria: <b>${escapeHTML(language.name)}</b></div>
+        <div class="quiz-meta-line">Kategoria: <b>${escapeHTML(language.name)}</b></div>
         <span class="quiz-big-word">${escapeHTML(concept.term)}</span>
       `;
 
@@ -8511,7 +8769,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           <div class="quiz-session-chip">Pytanie<b>${currentNo}/${totalNo}</b></div>
           <div class="quiz-session-chip">Partia<b>${batchSize} słów</b></div>
         </div>
-        <div style="margin-top: 10px;">Kategoria: <b>${escapeHTML(language.name)}</b> • Kierunek: <b>${directionLabel}</b></div>
+        <div class="quiz-meta-line">Kategoria: <b>${escapeHTML(language.name)}</b> • Kierunek: <b>${directionLabel}</b></div>
         <span class="quiz-big-word">${escapeHTML(prompt)}</span>
       `;
 
