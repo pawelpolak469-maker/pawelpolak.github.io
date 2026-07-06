@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v50 optymalizacja dużych danych</title>
+  <title>Habit Pixel v51 optymalizacja dużych danych</title>
 
   <style>
     :root {
@@ -6906,6 +6906,13 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       persistStudyRuntimeState();
     }
 
+    function hasActiveStudyRuntime() {
+      return Boolean(
+        (currentStudySession && !currentStudySession.finished) ||
+        (currentStudyConceptSession && !currentStudyConceptSession.finished)
+      );
+    }
+
     function refreshStudySessionEndButtons() {
       if (studyQuizEndButton) {
         studyQuizEndButton.hidden = !(currentStudySession && !currentStudySession.finished);
@@ -13441,6 +13448,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         const localTime = getLocalChangeTime();
         const remoteStats = getBackupStatsFromPayload(parsed);
         const localStats = getLocalBackupStats();
+
+        if (options.auto && hasActiveStudyRuntime()) {
+          setGoogleDriveStatus("Autosynchronizacja wstrzymana: trwa aktywna nauka. Nie wczytuję Drive, żeby nie zresetować aktualnego pytania.");
+          updateDriveHeaderStatus("syncing", "Pauza", "Aktywna nauka — Drive nie wczytuje danych.");
+          return;
+        }
 
         if (!hasDriveBaseline()) {
           if (localStats.meaningfulTotal > 0 && remoteStats.meaningfulTotal > 0) {
