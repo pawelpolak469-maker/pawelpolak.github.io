@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v52 mobile nauka kompakt</title>
+  <title>Habit Pixel v54</title>
 
   <style>
     :root {
@@ -4126,6 +4126,47 @@
       }
     }
 
+
+
+    /* v53: mocniejsza przypominajka słówek i pojęć — czarny przycisk z białą czaszką */
+    .study-quiz-actions .study-skull-review-button {
+      flex: 0 0 54px !important;
+      width: 54px;
+      min-width: 54px;
+      height: 54px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 16px;
+      background: linear-gradient(180deg, #050506, #000000);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.46), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      font-size: 27px;
+      line-height: 1;
+      text-shadow: 0 0 12px rgba(255, 255, 255, 0.18);
+    }
+
+    .study-quiz-actions .study-skull-review-button:hover {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+      border-color: rgba(255, 255, 255, 0.34);
+    }
+
+    .study-quiz-actions .study-skull-review-button:active {
+      transform: translateY(0);
+    }
+
+    @media (max-width: 600px) {
+      .study-quiz-actions .study-skull-review-button {
+        flex: 0 0 54px !important;
+        width: 54px;
+        min-width: 54px;
+        height: 54px;
+      }
+    }
+
   </style>
 </head>
 
@@ -4332,10 +4373,11 @@ libro = książka"></textarea>
 
       <div class="study-quiz-launcher">
         <h3 style="margin: 0;">Nauka turami</h3>
-        <p class="muted" style="margin: 0;">Zamiast mieszać 200 słów naraz, aplikacja bierze do 10 niezapamiętanych zwrotów, powtarza je po 4 razy i dopiero na końcu oznacza słowa jako zapamiętane.</p>
+        <p class="muted" style="margin: 0;">Start nauki bierze do 10 niezapamiętanych zwrotów i powtarza je po 4 razy. Przypominajka bierze do 20 zapamiętanych słów i przepuszcza je 2 razy. Przycisk ☠ odpala wszystkie zapamiętane słowa naraz.</p>
         <div class="study-quiz-actions">
-          <button onclick="openStudyQuizModal('learn')">Start nauki: 10 słów</button>
+          <button onclick="openStudyQuizModal('learn')">Start nauki</button>
           <button class="ghost" onclick="openStudyQuizModal('review')">Przypominajka</button>
+          <button class="study-skull-review-button" onclick="openStudyAllReviewQuizModal()" title="Pełna przypominajka: wszystkie zapamiętane słowa po 2 razy" aria-label="Pełna przypominajka wszystkich słów">☠</button>
           <button class="ghost" id="studyWordsToggleButton" onclick="toggleStudyWordsVisibility()">Pokaż listę słówek</button>
         </div>
       </div>
@@ -4377,10 +4419,11 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
         <div class="study-quiz-launcher">
           <h3 style="margin: 0;">Nauka turami</h3>
-          <p class="muted" style="margin: 0;">Tak jak w słówkach: start bierze niezapamiętane pojęcia z aktualnej kategorii. Różnica jest tylko taka, że odpowiedź oceniasz ręcznie po porównaniu ze wzorem.</p>
+          <p class="muted" style="margin: 0;">Tak jak w słówkach: start bierze do 10 niezapamiętanych pojęć i powtarza je po 4 razy. Powtórka bierze do 20 zapamiętanych pojęć i przepuszcza je 2 razy. Przycisk ☠ odpala wszystkie zapamiętane pojęcia naraz.</p>
           <div class="study-quiz-actions">
             <button onclick="openStudyConceptQuizModal('learn')">Start nauki pojęć</button>
             <button class="ghost" onclick="openStudyConceptQuizModal('review')">Powtórka pojęć</button>
+            <button class="study-skull-review-button" onclick="openStudyAllConceptReviewQuizModal()" title="Pełna powtórka: wszystkie zapamiętane pojęcia po 2 razy" aria-label="Pełna powtórka wszystkich pojęć">☠</button>
             <button class="ghost" id="studyConceptsToggleButton" onclick="toggleStudyConceptsVisibility()">Pokaż listę pojęć</button>
           </div>
         </div>
@@ -7046,6 +7089,15 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       return mode === "review" ? "review" : "learn";
     }
 
+    const studyLearnBatchLimit = 10;
+    const studyLearnRepetitions = 4;
+    const studyReviewBatchLimit = 20;
+    const studyReviewRepetitions = 2;
+    const studyConceptLearnBatchLimit = studyLearnBatchLimit;
+    const studyConceptLearnRepetitions = studyLearnRepetitions;
+    const studyConceptReviewBatchLimit = studyReviewBatchLimit;
+    const studyConceptReviewRepetitions = studyReviewRepetitions;
+
     function findStudyLanguageById(languageId) {
       normalizeStudy();
       return study.languages.find(language => language.id === languageId) || null;
@@ -7060,7 +7112,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       session.batchWordIds = Array.isArray(session.batchWordIds) ? session.batchWordIds.filter(Boolean) : [];
       session.stats = session.stats && typeof session.stats === "object" ? session.stats : {};
       session.index = Math.max(0, Math.min(Number(session.index) || 0, session.queue.length));
-      session.repetitions = Math.max(1, Number(session.repetitions) || (session.mode === "review" ? 2 : 4));
+      session.repetitions = Math.max(1, Number(session.repetitions) || (session.mode === "review" ? studyReviewRepetitions : studyLearnRepetitions));
+      session.reviewAll = Boolean(session.reviewAll);
       session.sessionCorrect = Math.max(0, Number(session.sessionCorrect) || 0);
       session.sessionWrong = Math.max(0, Number(session.sessionWrong) || 0);
       session.mode = getNormalizedStudyMode(session.mode);
@@ -7091,6 +7144,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       session.queue = Array.isArray(session.queue) ? session.queue.filter(Boolean) : [];
       session.stats = session.stats && typeof session.stats === "object" ? session.stats : {};
       session.index = Math.max(0, Math.min(Number(session.index) || 0, session.queue.length));
+      session.repetitions = Math.max(1, Number(session.repetitions) || (session.mode === "review" ? studyConceptReviewRepetitions : studyConceptLearnRepetitions));
+      session.reviewAll = Boolean(session.reviewAll);
       session.sessionCorrect = Math.max(0, Number(session.sessionCorrect) || 0);
       session.sessionPartial = Math.max(0, Number(session.sessionPartial) || 0);
       session.sessionWrong = Math.max(0, Number(session.sessionWrong) || 0);
@@ -7886,7 +7941,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       return concepts.filter(concept => !concept.remembered);
     }
 
-    function startStudyConceptSession(mode = "learn") {
+    function startStudyConceptSession(mode = "learn", options = {}) {
       const language = getSelectedStudyConceptCategory();
       if (!language || !Array.isArray(language.concepts) || !language.concepts.length) {
         alert("Dodaj przynajmniej jedno pojęcie w wybranej kategorii.");
@@ -7894,6 +7949,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       const normalizedMode = mode === "review" ? "review" : "learn";
+      const useAllRememberedReview = normalizedMode === "review" && Boolean(options.allRemembered);
       const candidates = getConceptCandidates(language, normalizedMode);
       if (!candidates.length) {
         alert(normalizedMode === "review"
@@ -7902,15 +7958,35 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         return false;
       }
 
+      const batchSize = normalizedMode === "review"
+        ? Math.min(useAllRememberedReview ? candidates.length : studyConceptReviewBatchLimit, candidates.length)
+        : Math.min(studyConceptLearnBatchLimit, candidates.length);
       const selected = normalizedMode === "review"
-        ? candidates.slice(0, Math.min(8, candidates.length))
-        : shuffleStudyItems(candidates).slice(0, Math.min(8, candidates.length));
+        ? (useAllRememberedReview ? shuffleStudyItems(candidates) : candidates.slice(0, batchSize))
+        : shuffleStudyItems(candidates).slice(0, batchSize);
+      const repetitions = normalizedMode === "review" ? studyConceptReviewRepetitions : studyConceptLearnRepetitions;
+      const queue = [];
+
+      if (normalizedMode === "review") {
+        for (let repeat = 0; repeat < repetitions; repeat++) {
+          selected.forEach(concept => queue.push(concept.id));
+        }
+      } else {
+        selected.forEach(concept => {
+          for (let repeat = 0; repeat < repetitions; repeat++) {
+            queue.push(concept.id);
+          }
+        });
+      }
+
       currentStudyConceptSession = {
         mode: normalizedMode,
         languageId: language.id,
         conceptIds: selected.map(concept => concept.id),
-        queue: selected.map(concept => concept.id),
+        queue: shuffleStudyItems(queue),
         index: 0,
+        reviewAll: useAllRememberedReview,
+        repetitions,
         sessionCorrect: 0,
         sessionPartial: 0,
         sessionWrong: 0,
@@ -7922,7 +7998,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       };
 
       selected.forEach(concept => {
-        currentStudyConceptSession.stats[concept.id] = { result: "" };
+        currentStudyConceptSession.stats[concept.id] = { result: "", correct: 0, partial: 0, wrong: 0 };
       });
 
       currentStudyConceptQuiz = null;
@@ -7956,6 +8032,35 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         studyConceptQuizStatusNote.textContent = currentStudyConceptSession.mode === "review"
           ? "Masz już aktywną powtórkę pojęć. Nie nadpisuję jej nową turą — dokończ ją albo zamknij okno i wróć później."
           : "Masz już aktywną turę pojęć. Nie nadpisuję jej powtórką — dokończ ją albo zamknij okno i wróć później.";
+      }
+
+      persistStudyRuntimeState();
+    }
+
+
+    function openStudyAllConceptReviewQuizModal() {
+      if (!studyConceptQuizModal) return;
+      ensureStudyConceptQuizModalRoot();
+      studyModalSavedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+      const hasRunningSession = Boolean(currentStudyConceptSession && !currentStudyConceptSession.finished);
+      if (!currentStudyConceptSession || currentStudyConceptSession.finished) {
+        const started = startStudyConceptSession("review", { allRemembered: true });
+        if (!started) return;
+      } else if (!currentStudyConceptQuiz) {
+        startStudyConceptQuiz({ force: true });
+      }
+
+      studyConceptQuizModal.classList.add("active");
+      studyConceptQuizModal.setAttribute("aria-hidden", "false");
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      renderStudyConceptQuiz();
+
+      if (hasRunningSession && studyConceptQuizStatusNote) {
+        studyConceptQuizStatusNote.textContent = currentStudyConceptSession.reviewAll
+          ? "Masz już aktywną pełną powtórkę pojęć. Dokończ ją albo zamknij okno i wróć później."
+          : "Masz już aktywną turę pojęć albo zwykłą powtórkę. Nie nadpisuję jej pełną powtórką — dokończ ją albo zamknij okno i wróć później.";
       }
 
       persistStudyRuntimeState();
@@ -8060,14 +8165,14 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       const language = findStudyConceptCategoryById(currentStudyConceptSession.languageId);
       if (currentStudyConceptSession.finished) {
-        if (studyConceptQuizModalTitle) studyConceptQuizModalTitle.textContent = currentStudyConceptSession.mode === "review" ? "Powtórka pojęć zakończona" : "Tura pojęć zakończona";
+        if (studyConceptQuizModalTitle) studyConceptQuizModalTitle.textContent = currentStudyConceptSession.mode === "review" ? (currentStudyConceptSession.reviewAll ? "Pełna powtórka pojęć zakończona" : "Powtórka pojęć zakończona") : "Tura pojęć zakończona";
         if (studyConceptQuizModeInfo) studyConceptQuizModeInfo.textContent = "Wynik został zapisany w statystykach nauki i planie powtórek.";
         if (studyConceptQuizAnswerInput) studyConceptQuizAnswerInput.value = "";
         studyConceptQuizPrompt.innerHTML = currentStudyConceptSession.summaryHtml || "Sesja zakończona.";
         if (studyConceptQuizNextButton) {
           studyConceptQuizNextButton.disabled = false;
-          studyConceptQuizNextButton.textContent = currentStudyConceptSession.mode === "review" ? "Nowa powtórka" : "Nowa tura";
-          studyConceptQuizNextButton.onclick = () => startStudyConceptSession(currentStudyConceptSession.mode);
+          studyConceptQuizNextButton.textContent = currentStudyConceptSession.mode === "review" ? (currentStudyConceptSession.reviewAll ? "Nowa pełna powtórka" : "Nowa powtórka") : "Nowa tura";
+          studyConceptQuizNextButton.onclick = () => startStudyConceptSession(currentStudyConceptSession.mode, { allRemembered: Boolean(currentStudyConceptSession.reviewAll) });
         }
         if (studyConceptQuizCheckButton) studyConceptQuizCheckButton.disabled = true;
         if (studyConceptQuizDontKnowButton) studyConceptQuizDontKnowButton.disabled = true;
@@ -8089,9 +8194,13 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       const currentNo = Math.min(currentStudyConceptSession.index + 1, currentStudyConceptSession.queue.length);
       const totalNo = currentStudyConceptSession.queue.length;
-      const modeLabel = currentStudyConceptSession.mode === "review" ? "Powtórka" : "Pojęcia";
-      if (studyConceptQuizModalTitle) studyConceptQuizModalTitle.textContent = currentStudyConceptSession.mode === "review" ? "Powtórka pojęć" : "Nauka pojęć";
-      if (studyConceptQuizModeInfo) studyConceptQuizModeInfo.textContent = "Zgodność procentowa sprawdza słowa kluczowe i podobieństwo definicji, ale ostateczna ocena jest ręczna.";
+      const modeLabel = currentStudyConceptSession.mode === "review" ? (currentStudyConceptSession.reviewAll ? "Pełna powtórka" : "Powtórka") : "Pojęcia";
+      if (studyConceptQuizModalTitle) studyConceptQuizModalTitle.textContent = currentStudyConceptSession.mode === "review" ? (currentStudyConceptSession.reviewAll ? "Pełna powtórka pojęć" : "Powtórka pojęć") : "Nauka pojęć";
+      if (studyConceptQuizModeInfo) studyConceptQuizModeInfo.textContent = currentStudyConceptSession.mode === "review"
+        ? (currentStudyConceptSession.reviewAll
+          ? "Pełna powtórka przepuszcza wszystkie zapamiętane pojęcia po 2 razy, w losowej kolejności."
+          : "Powtórka bierze do 20 zapamiętanych pojęć i przepuszcza je 2 razy, najstarsze przypomnienia mają pierwszeństwo.")
+        : "Start nauki bierze do 10 niezapamiętanych pojęć i powtarza je po 4 razy. Ostateczna ocena jest ręczna.";
 
       studyConceptQuizPrompt.innerHTML = `
         <div class="quiz-session-grid">
@@ -8117,7 +8226,11 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
       if (studyConceptQuizStatusNote) studyConceptQuizStatusNote.textContent = currentStudyConceptQuiz.answered
         ? "Ocena zapisana. Możesz przejść dalej."
-        : "Wpisz odpowiedź, sprawdź zgodność i wybierz ręczną ocenę.";
+        : currentStudyConceptSession.mode === "review"
+          ? (currentStudyConceptSession.reviewAll
+            ? "Lecą wszystkie zapamiętane pojęcia, każde 2 razy, w losowej kolejności."
+            : "Lecą zapamiętane pojęcia, każde 2 razy. Najstarsze przypomnienia mają pierwszeństwo.")
+          : "Wpisz odpowiedź, sprawdź zgodność i wybierz ręczną ocenę.";
       if (!currentStudyConceptQuiz.answered && studyConceptQuizAnswerInput) studyConceptQuizAnswerInput.focus();
     }
 
@@ -8165,35 +8278,41 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       const wasRemembered = Boolean(concept.remembered);
       const now = new Date().toISOString();
       stat.result = normalized;
+      stat.correct = Math.max(0, Number(stat.correct) || 0);
+      stat.partial = Math.max(0, Number(stat.partial) || 0);
+      stat.wrong = Math.max(0, Number(stat.wrong) || 0);
       currentStudyConceptQuiz.answered = true;
       concept.lastReviewedAt = now;
       if (currentStudyConceptSession.mode === "review") concept.lastReminderAt = now;
 
       if (normalized === "correct") {
         concept.correct += 1;
+        stat.correct += 1;
         currentStudyConceptSession.sessionCorrect += 1;
         concept.remembered = true;
         if (!concept.rememberedAt) concept.rememberedAt = now;
         if (!wasRemembered) concept.lastReminderAt = "";
-        if (!wasRemembered) currentStudyConceptSession.learned += 1;
+        if (!wasRemembered && currentStudyConceptSession.mode === "learn") currentStudyConceptSession.learned += 1;
         updateStudySrs(concept, "correct");
 
       } else if (normalized === "partial") {
         concept.partial += 1;
+        stat.partial += 1;
         currentStudyConceptSession.sessionPartial += 1;
         concept.remembered = false;
         concept.rememberedAt = "";
         concept.lastReminderAt = "";
-        if (wasRemembered) currentStudyConceptSession.forgotten += 1;
+        if (wasRemembered && currentStudyConceptSession.mode === "review") currentStudyConceptSession.forgotten += 1;
         updateStudySrs(concept, "partial");
 
       } else {
         concept.wrong += 1;
+        stat.wrong += 1;
         currentStudyConceptSession.sessionWrong += 1;
         concept.remembered = false;
         concept.rememberedAt = "";
         concept.lastReminderAt = "";
-        if (wasRemembered) currentStudyConceptSession.forgotten += 1;
+        if (wasRemembered && currentStudyConceptSession.mode === "review") currentStudyConceptSession.forgotten += 1;
         updateStudySrs(concept, "wrong");
 
       }
@@ -8219,7 +8338,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       currentStudyConceptSession.finished = true;
       currentStudyConceptQuiz = null;
       currentStudyConceptSession.summaryHtml = `
-        <b>Sesja pojęć zakończona.</b><br>
+        <b>${currentStudyConceptSession.mode === "review" ? (currentStudyConceptSession.reviewAll ? "Pełna powtórka pojęć zakończona." : "Powtórka pojęć zakończona.") : "Sesja pojęć zakończona."}</b><br>
         Umiem: <b>${currentStudyConceptSession.sessionCorrect}</b> • Częściowo: <b>${currentStudyConceptSession.sessionPartial}</b> • Nie umiem: <b>${currentStudyConceptSession.sessionWrong}</b> z <b>${total}</b>.<br>
         Nowo zapamiętane: <b>${currentStudyConceptSession.learned}</b>. Cofnięte do nauki: <b>${currentStudyConceptSession.forgotten}</b>.
       `;
@@ -8512,7 +8631,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         : null;
     }
 
-    function startStudySession(mode = "learn") {
+    function startStudySession(mode = "learn", options = {}) {
       const language = getSelectedStudyLanguage();
       if (!language || !language.words.length) {
         alert("Dodaj przynajmniej jedno słówko w wybranej kategorii.");
@@ -8520,6 +8639,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       const normalizedMode = mode === "review" ? "review" : "learn";
+      const useAllRememberedReview = normalizedMode === "review" && Boolean(options.allRemembered);
       let candidates = [];
       if (normalizedMode === "review") {
         const rememberedWords = language.words.filter(word => word.remembered);
@@ -8536,11 +8656,13 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       }
 
       clearTimeout(studyCorrectAutoNextTimer);
-      const batchSize = Math.min(10, candidates.length);
+      const batchSize = normalizedMode === "review"
+        ? Math.min(useAllRememberedReview ? candidates.length : studyReviewBatchLimit, candidates.length)
+        : Math.min(studyLearnBatchLimit, candidates.length);
       const selected = normalizedMode === "review"
-        ? candidates.slice(0, batchSize)
+        ? (useAllRememberedReview ? shuffleStudyItems(candidates) : candidates.slice(0, batchSize))
         : shuffleStudyItems(candidates).slice(0, batchSize);
-      const repetitions = normalizedMode === "review" ? 2 : 4;
+      const repetitions = normalizedMode === "review" ? studyReviewRepetitions : studyLearnRepetitions;
       const queue = [];
 
       if (normalizedMode === "review") {
@@ -8567,8 +8689,9 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         mode: normalizedMode,
         languageId: language.id,
         batchWordIds: selected.map(word => word.id),
-        queue: normalizedMode === "review" ? queue : shuffleStudyItems(queue),
+        queue: shuffleStudyItems(queue),
         index: 0,
+        reviewAll: useAllRememberedReview,
         repetitions,
         sessionCorrect: 0,
         sessionWrong: 0,
@@ -8611,6 +8734,34 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         studyQuizStatusNote.textContent = currentStudySession.mode === "review"
           ? "Masz już aktywną przypominajkę. Nie nadpisuję jej nową turą — dokończ ją albo zamknij okno i wróć później."
           : "Masz już aktywną turę nauki. Nie nadpisuję jej przypominajką — dokończ ją albo zamknij okno i wróć później.";
+      }
+
+      persistStudyRuntimeState();
+    }
+
+    function openStudyAllReviewQuizModal() {
+      if (!studyQuizModal) return;
+      ensureStudyQuizModalRoot();
+      studyModalSavedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+
+      const hasRunningSession = Boolean(currentStudySession && !currentStudySession.finished);
+      if (!currentStudySession || currentStudySession.finished) {
+        const started = startStudySession("review", { allRemembered: true });
+        if (!started) return;
+      } else if (!currentStudyQuiz) {
+        startStudyQuiz({ force: true });
+      }
+
+      studyQuizModal.classList.add("active");
+      studyQuizModal.setAttribute("aria-hidden", "false");
+      document.documentElement.style.overflow = "hidden";
+      document.body.style.overflow = "hidden";
+      renderStudyQuiz();
+
+      if (hasRunningSession && studyQuizStatusNote) {
+        studyQuizStatusNote.textContent = currentStudySession.reviewAll
+          ? "Masz już aktywną pełną przypominajkę. Dokończ ją albo zamknij okno i wróć później."
+          : "Masz już aktywną turę nauki albo zwykłą przypominajkę. Nie nadpisuję jej pełną przypominajką — dokończ ją albo zamknij okno i wróć później.";
       }
 
       persistStudyRuntimeState();
@@ -8698,7 +8849,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       if (!currentStudySession) {
         if (studyQuizModalTitle) studyQuizModalTitle.textContent = "Nauka turami";
-        if (studyQuizModeInfo) studyQuizModeInfo.textContent = "Start nauki bierze do 10 niezapamiętanych słów. Przypominajka sprawdza słowa oznaczone jako zapamiętane.";
+        if (studyQuizModeInfo) studyQuizModeInfo.textContent = "Start nauki bierze do 10 słów i daje 40 wpisów. Przypominajka bierze do 20 słów i też daje 40 wpisów.";
         studyQuizPrompt.textContent = "Wybierz tryb nauki z przycisków w zakładce Nauka.";
         if (studyQuizDrawButton) {
           studyQuizDrawButton.disabled = false;
@@ -8716,7 +8867,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         const total = currentStudySession.queue.length || 0;
         const wrong = Number(currentStudySession.sessionWrong || 0);
         const rate = total ? Math.round((wrong / total) * 100) : 0;
-        if (studyQuizModalTitle) studyQuizModalTitle.textContent = currentStudySession.mode === "review" ? "Przypominajka zakończona" : "Tura zakończona";
+        if (studyQuizModalTitle) studyQuizModalTitle.textContent = currentStudySession.mode === "review" ? (currentStudySession.reviewAll ? "Pełna przypominajka zakończona" : "Przypominajka zakończona") : "Tura zakończona";
         if (studyQuizModeInfo) studyQuizModeInfo.textContent = currentStudySession.mode === "review"
           ? "Słowa, które miały kilka błędów, wróciły do zwykłej nauki."
           : "Słowa z dobrym wynikiem zostały oznaczone jako zapamiętane i nie będą mieszać się w głównym quizie.";
@@ -8728,8 +8879,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         studyQuizPrompt.innerHTML = currentStudySession.summaryHtml || "Sesja zakończona.";
         if (studyQuizDrawButton) {
           studyQuizDrawButton.disabled = false;
-          studyQuizDrawButton.textContent = currentStudySession.mode === "review" ? "Nowa przypominajka" : "Nowa tura";
-          studyQuizDrawButton.onclick = () => startStudySession(currentStudySession.mode);
+          studyQuizDrawButton.textContent = currentStudySession.mode === "review" ? (currentStudySession.reviewAll ? "Nowa pełna przypominajka" : "Nowa przypominajka") : "Nowa tura";
+          studyQuizDrawButton.onclick = () => startStudySession(currentStudySession.mode, { allRemembered: Boolean(currentStudySession.reviewAll) });
         }
         if (studyQuizCheckButton) studyQuizCheckButton.disabled = true;
         if (studyQuizDontKnowButton) studyQuizDontKnowButton.disabled = true;
@@ -8751,16 +8902,18 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       const prompt = currentStudyQuiz.direction === "source-to-target" ? word.source : word.target;
       const directionLabel = currentStudyQuiz.direction === "source-to-target" ? "słowo → tłumaczenie" : "tłumaczenie → słowo";
-      const modeLabel = currentStudySession.mode === "review" ? "Przypominajka" : "Nauka";
+      const modeLabel = currentStudySession.mode === "review" ? (currentStudySession.reviewAll ? "Pełna przypominajka" : "Przypominajka") : "Nauka";
       const currentNo = Math.min(currentStudySession.index + 1, currentStudySession.queue.length);
       const totalNo = currentStudySession.queue.length;
       const batchSize = currentStudySession.batchWordIds.length;
       const learnedBefore = language.words.filter(item => item.remembered).length;
       const toLearn = language.words.length - learnedBefore;
 
-      if (studyQuizModalTitle) studyQuizModalTitle.textContent = currentStudySession.mode === "review" ? "Przypominajka" : "Nauka turą";
+      if (studyQuizModalTitle) studyQuizModalTitle.textContent = currentStudySession.mode === "review" ? (currentStudySession.reviewAll ? "Pełna przypominajka" : "Przypominajka") : "Nauka turą";
       if (studyQuizModeInfo) studyQuizModeInfo.textContent = currentStudySession.mode === "review"
-        ? "Tryb dla słów zapamiętanych. Najstarsze przypominajki mają pierwszeństwo; kilka błędów może cofnąć słowo do zwykłej nauki."
+        ? (currentStudySession.reviewAll
+          ? "Pełna przypominajka przepuszcza wszystkie zapamiętane słowa po 2 razy, w losowej kolejności."
+          : "Tryb dla słów zapamiętanych. Najstarsze przypominajki mają pierwszeństwo; kilka błędów może cofnąć słowo do zwykłej nauki.")
         : "Tryb bierze do 10 niezapamiętanych słów i powtarza je po 4 razy.";
 
       studyQuizPrompt.innerHTML = `
@@ -8785,7 +8938,9 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         studyQuizStatusNote.textContent = currentStudyQuiz.answered
           ? "Pytanie zaliczone. Za chwilę przejdę dalej automatycznie."
           : currentStudySession.mode === "review"
-            ? `Zapamiętane w kategorii: ${learnedBefore}. Teraz idą słowa najdłużej nieprzypominane.`
+            ? (currentStudySession.reviewAll
+              ? `Zapamiętane w kategorii: ${learnedBefore}. Lecą wszystkie zapamiętane słowa, każde 2 razy, w losowej kolejności.`
+              : `Zapamiętane w kategorii: ${learnedBefore}. Teraz idą słowa najdłużej nieprzypominane.`)
             : `Do nauki: ${toLearn}. Słowa zapamiętane nie pojawiają się w tym trybie.`;
       }
 
@@ -8861,7 +9016,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       currentStudySession.finished = true;
       currentStudyQuiz = null;
       currentStudySession.summaryHtml = currentStudySession.mode === "review"
-        ? `<b>Przypominajka zakończona.</b><br>Utrzymane: <b>${kept}</b>. Cofnięte do nauki: <b>${forgotten}</b>.<br>Współczynnik błędów: <b>${errorRate}%</b>.${details.length ? `<ul>${details.join("")}</ul>` : ""}`
+        ? `<b>${currentStudySession.reviewAll ? "Pełna przypominajka zakończona." : "Przypominajka zakończona."}</b><br>Utrzymane: <b>${kept}</b>. Cofnięte do nauki: <b>${forgotten}</b>.<br>Współczynnik błędów: <b>${errorRate}%</b>.${details.length ? `<ul>${details.join("")}</ul>` : ""}`
         : `<b>Tura zakończona.</b><br>Nowo zapamiętane: <b>${learned}</b>. Nadal do nauki: <b>${stillLearning}</b>.<br>Współczynnik błędów: <b>${errorRate}%</b>.${details.length ? `<ul>${details.join("")}</ul>` : ""}`;
 
       recordStudyProgressSnapshot(language, {
