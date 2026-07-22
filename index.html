@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v57 szybka nauka i przypominajka</title>
+  <title>Habit Pixel v58 inteligentna przypominajka</title>
 
   <style>
     :root {
@@ -4423,7 +4423,7 @@ libro = książka"></textarea>
 
       <div class="study-quiz-launcher">
         <h3 style="margin: 0;">Nauka turami</h3>
-        <p class="muted" style="margin: 0;">Start nauki bierze do 10 niezapamiętanych zwrotów i powtarza je po 4 razy. Przypominajka bierze do 20 zapamiętanych słów i przepuszcza je 2 razy. Przycisk ☠ odpala wszystkie zapamiętane słowa naraz.</p>
+        <p class="muted" style="margin: 0;">Start nauki bierze do 10 niezapamiętanych zwrotów i powtarza je po 4 razy. Przypominajka bierze do 20 zapamiętanych słów i przepuszcza je 2 razy. Najpierw wybiera słowa najdłużej niepowtarzane, z dodatkowym priorytetem za świeże błędy; bezbłędna sesja resetuje ten priorytet. Przycisk ☠ odpala wszystkie zapamiętane słowa naraz.</p>
         <div class="study-quiz-actions">
           <button onclick="openStudyQuizModal('learn')">Start nauki</button>
           <button class="ghost" onclick="openStudyQuizModal('review')">Przypominajka</button>
@@ -6899,6 +6899,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           remembered: false,
           rememberedAt: "",
           reviewWrongStreak: 0,
+          reviewErrorScore: 0,
           lastReviewedAt: "",
           lastReminderAt: "",
           dueAt: "",
@@ -6978,6 +6979,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           remembered: false,
           rememberedAt: "",
           reviewWrongStreak: 0,
+          reviewErrorScore: 0,
           lastReviewedAt: "",
           lastReminderAt: "",
           dueAt: "",
@@ -7132,6 +7134,9 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         remembered,
         rememberedAt,
         reviewWrongStreak: Number(word.reviewWrongStreak) > 0 ? Number(word.reviewWrongStreak) : 0,
+        // v58: bieżący priorytet błędów przypominajki. To NIE jest historyczny licznik `wrong`.
+        // Czysta przypominajka zeruje tę wartość, więc stare błędy nie karzą słowa bez końca.
+        reviewErrorScore: Math.max(0, Math.min(4, Number(word.reviewErrorScore || 0))),
         lastReviewedAt: word.lastReviewedAt || "",
         lastReminderAt: word.lastReminderAt || "",
         dueAt: "",
@@ -7727,6 +7732,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         remembered: false,
         rememberedAt: "",
         reviewWrongStreak: 0,
+        reviewErrorScore: 0,
         lastReviewedAt: "",
         lastReminderAt: "",
         dueAt: "",
@@ -7925,16 +7931,53 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       return getStudyDaysSinceDateKey(getStudyDateKeyFromIso(item.lastReminderAt));
     }
 
+    function getStudyLastReminderTimestamp(item) {
+      if (!item || !item.lastReminderAt) return null;
+      const time = new Date(item.lastReminderAt).getTime();
+      return Number.isFinite(time) ? time : null;
+    }
+
+    function getStudyHoursSinceLastReview(item) {
+      if (!item || !item.remembered) return null;
+      const time = getStudyLastReminderTimestamp(item);
+      if (time === null) return null;
+      return Math.max(0, (Date.now() - time) / 3600000);
+    }
+
+    function getStudyReviewErrorScore(item) {
+      return Math.max(0, Math.min(4, Number(item && item.reviewErrorScore || 0)));
+    }
+
     function getStudyReviewPriorityValue(item) {
-      const daysSinceReview = getStudyDaysSinceLastReview(item);
-      if (daysSinceReview === null) return Number.POSITIVE_INFINITY;
-      return daysSinceReview;
+      const hoursSinceReview = getStudyHoursSinceLastReview(item);
+
+      // Element, który jeszcze nigdy nie był w przypominajce, ma bezwzględne pierwszeństwo.
+      if (hoursSinceReview === null) return Number.POSITIVE_INFINITY;
+
+      // v58: 1 świeży błąd daje czasowy bonus odpowiadający ~12 godzinom "starości".
+      // Po bezbłędnej przypominajce reviewErrorScore zostaje wyzerowany.
+      const errorBoostHours = getStudyReviewErrorScore(item) * 12;
+      return hoursSinceReview + errorBoostHours;
     }
 
     function compareStudyReviewPriority(a, b) {
       const aPriority = getStudyReviewPriorityValue(a);
       const bPriority = getStudyReviewPriorityValue(b);
       if (aPriority !== bPriority) return bPriority - aPriority;
+
+      // Przy remisie patrzymy na DOKŁADNY czas, a nie tylko na dzień.
+      // Dzięki temu kilka sesji wykonanych tego samego dnia rotuje prawidłowo.
+      const aTime = getStudyLastReminderTimestamp(a);
+      const bTime = getStudyLastReminderTimestamp(b);
+      if (aTime !== bTime) {
+        if (aTime === null) return -1;
+        if (bTime === null) return 1;
+        return aTime - bTime;
+      }
+
+      const aErrorScore = getStudyReviewErrorScore(a);
+      const bErrorScore = getStudyReviewErrorScore(b);
+      if (aErrorScore !== bErrorScore) return bErrorScore - aErrorScore;
 
       const aRememberedKey = getStudyDateKeyFromIso(a && a.rememberedAt);
       const bRememberedKey = getStudyDateKeyFromIso(b && b.rememberedAt);
@@ -8018,6 +8061,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         remembered: false,
         rememberedAt: "",
         reviewWrongStreak: 0,
+        reviewErrorScore: 0,
         lastReviewedAt: "",
         lastReminderAt: "",
         dueAt: "",
@@ -8444,7 +8488,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       if (studyConceptQuizModeInfo) studyConceptQuizModeInfo.textContent = currentStudyConceptSession.mode === "review"
         ? (currentStudyConceptSession.reviewAll
           ? "Pełna powtórka przepuszcza wszystkie zapamiętane pojęcia po 2 razy, w losowej kolejności."
-          : "Powtórka bierze do 20 zapamiętanych pojęć i przepuszcza je 2 razy, najstarsze przypomnienia mają pierwszeństwo.")
+          : "Powtórka bierze do 20 zapamiętanych pojęć i przepuszcza je 2 razy, a dokładny czas ostatniej powtórki decyduje o kolejności.")
         : "Start nauki bierze do 10 niezapamiętanych pojęć i powtarza je po 4 razy. Ostateczna ocena jest ręczna.";
 
       studyConceptQuizPrompt.innerHTML = `
@@ -9201,7 +9245,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           : currentStudySession.mode === "review"
             ? (currentStudySession.reviewAll
               ? `Zapamiętane w kategorii: ${learnedBefore}. Lecą wszystkie zapamiętane słowa, każde 2 razy, w losowej kolejności.`
-              : `Zapamiętane w kategorii: ${learnedBefore}. Teraz idą słowa najdłużej nieprzypominane.`)
+              : `Zapamiętane w kategorii: ${learnedBefore}. Teraz idą słowa najdłużej nieprzypominane, z dodatkowym priorytetem za świeże błędy.`)
             : `Do nauki: ${toLearn}. Słowa zapamiętane nie pojawiają się w tym trybie.`;
       }
 
@@ -9238,15 +9282,24 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         if (currentStudySession.mode === "review") {
           word.lastReviewedAt = now;
           word.lastReminderAt = now;
+
           if (stat.wrong >= 2 || Number(word.reviewWrongStreak || 0) >= 2) {
             word.remembered = false;
             word.rememberedAt = "";
             word.lastReminderAt = "";
             word.reviewWrongStreak = 0;
+            word.reviewErrorScore = 0;
             updateStudySrs(word, "wrong");
             forgotten++;
             details.push(`<li><b>${escapeHTML(word.source)}</b> — wraca do nauki</li>`);
           } else {
+            // v58: historyczne `word.wrong` zostaje wyłącznie statystyką.
+            // Priorytet przypominajki zależy od świeżych błędów i znika po czystej sesji.
+            if (stat.wrong === 0) {
+              word.reviewErrorScore = 0;
+            } else {
+              word.reviewErrorScore = Math.min(4, Math.max(0, Number(word.reviewErrorScore || 0)) + 1);
+            }
             updateStudySrs(word, "correct");
             kept++;
           }
@@ -9257,6 +9310,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
             word.rememberedAt = now;
             word.lastReminderAt = "";
             word.reviewWrongStreak = 0;
+            word.reviewErrorScore = 0;
             updateStudySrs(word, "correct");
             details.push(`<li><b>${escapeHTML(word.source)}</b> — zapamiętane (${stat.correct}/${currentStudySession.repetitions})</li>`);
           } else {
@@ -9436,6 +9490,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       word.rememberedAt = word.remembered ? new Date().toISOString() : "";
       word.lastReminderAt = "";
       word.reviewWrongStreak = 0;
+      word.reviewErrorScore = 0;
       if (word.remembered) updateStudySrs(word, "correct");
       recordStudyProgressSnapshot(language, {
         learned: !wasRemembered && word.remembered ? 1 : 0,
