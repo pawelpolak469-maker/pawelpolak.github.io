@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Habit Pixel v55 przypominajka fix 40 all</title>
+  <title>Habit Pixel v57 szybka nauka i przypominajka</title>
 
   <style>
     :root {
@@ -810,6 +810,56 @@
 
     .settings-box h3 {
       margin: 0 0 8px;
+    }
+
+    .study-speed-settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+
+    .study-speed-setting {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 18px;
+      background: rgba(17, 24, 39, 0.66);
+      border: 1px solid var(--border);
+    }
+
+    .study-speed-setting.active {
+      border-color: rgba(83, 214, 162, 0.38);
+      background: rgba(83, 214, 162, 0.075);
+    }
+
+    .study-speed-setting h4 {
+      margin: 0;
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .study-speed-setting p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.45;
+    }
+
+    .study-speed-toggle {
+      width: 100%;
+      box-shadow: none;
+    }
+
+    .study-speed-toggle.enabled {
+      background: linear-gradient(180deg, #7be2b8, #47c792);
+      color: #03110b;
+    }
+
+    @media (max-width: 720px) {
+      .study-speed-settings-grid {
+        grid-template-columns: 1fr;
+      }
     }
 
     .settings-row {
@@ -4474,7 +4524,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         <div class="modal-head">
           <div>
             <h3 class="modal-title" id="studyConceptQuizModalTitle">Quiz pojęć</h3>
-            <p class="muted" id="studyConceptQuizModeInfo" style="margin: 0;">Wpisz definicję własnymi słowami, pokaż wzór i oceń odpowiedź ręcznie.</p>
+            <p class="muted" id="studyConceptQuizModeInfo" style="margin: 0;">Wpisz definicję. Enter pokazuje wzór; przy włączonej szybkiej nauce/powtórce pełna poprawna definicja zalicza się sama.</p>
           </div>
           <div class="modal-head-actions">
             <button class="modal-end-session" id="studyConceptQuizEndButton" onclick="endStudyConceptQuizSessionManually()" hidden>Zakończ</button>
@@ -5027,6 +5077,37 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
               <div class="settings-box-inner">
                 <div class="settings-box-head">
                   <div class="settings-box-title">
+                    <span class="settings-kicker">Nauka</span>
+                    <h3>Szybkie zaliczanie odpowiedzi</h3>
+                    <p class="muted" style="margin: 0;">
+                      Włącz automatyczne zaliczanie poprawnej odpowiedzi podczas pisania. Po trafieniu aplikacja pokazuje poprawność przez około 0,5 s i przechodzi do kolejnego pytania.
+                    </p>
+                  </div>
+                  <span class="settings-icon">⚡</span>
+                </div>
+
+                <div class="study-speed-settings-grid">
+                  <div class="study-speed-setting" id="quickReviewSettingCard">
+                    <h4>Szybka przypominajka</h4>
+                    <p>Dotyczy wszystkich przypominajek słówek i pojęć, także pełnych trybów ☠. Po wyłączeniu odpowiedź zatwierdzasz Enterem / przyciskiem.</p>
+                    <button class="ghost study-speed-toggle" id="quickReviewToggleButton" onclick="toggleQuickReviewMode()">Włącz</button>
+                  </div>
+
+                  <div class="study-speed-setting" id="quickLearnSettingCard">
+                    <h4>Szybka nauka</h4>
+                    <p>Automatycznie zalicza poprawne odpowiedzi również w zwykłej nauce słówek i pojęć. Po wyłączeniu działa standardowe zatwierdzanie Enterem / przyciskiem.</p>
+                    <button class="ghost study-speed-toggle" id="quickLearnToggleButton" onclick="toggleQuickLearnMode()">Włącz</button>
+                  </div>
+                </div>
+
+                <p class="info" id="studySpeedSettingsInfo" style="margin: 12px 0 0;"></p>
+              </div>
+            </div>
+
+            <div class="settings-box">
+              <div class="settings-box-inner">
+                <div class="settings-box-head">
+                  <div class="settings-box-title">
                     <span class="settings-kicker">Rozwój</span>
                     <h3>Kontrola punktów długu</h3>
                     <p class="muted" style="margin: 0;">
@@ -5303,6 +5384,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const studyConceptTopicFilterStorageKey = "habit-pixel-study-concept-topic-filter";
     const trainingStorageKey = "habit-pixel-training";
     const developmentDebtSettingsStorageKey = "habit-pixel-development-debt-settings";
+    const studySpeedSettingsStorageKey = "habit-pixel-study-speed-settings";
 
     let selectedWeightRange = "week";
     let weightCalendarCurrentDate = new Date();
@@ -5378,6 +5460,22 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
 
+    function createDefaultStudySpeedSettings() {
+      return {
+        quickReview: true,
+        quickLearn: false
+      };
+    }
+
+    function normalizeStudySpeedSettings(settings) {
+      const defaults = createDefaultStudySpeedSettings();
+      const source = settings && typeof settings === "object" ? settings : {};
+      return {
+        quickReview: typeof source.quickReview === "boolean" ? source.quickReview : defaults.quickReview,
+        quickLearn: typeof source.quickLearn === "boolean" ? source.quickLearn : defaults.quickLearn
+      };
+    }
+
     function createDefaultDevelopmentDebtSettings() {
       return {
         rhythm: 2,
@@ -5447,6 +5545,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     let studyCorrectAutoNextTimer = null;
     let training = JSON.parse(localStorage.getItem(trainingStorageKey)) || createDefaultTraining();
     let developmentDebtSettings = normalizeDevelopmentDebtSettings(JSON.parse(localStorage.getItem(developmentDebtSettingsStorageKey)) || createDefaultDevelopmentDebtSettings());
+    let studySpeedSettings = normalizeStudySpeedSettings(JSON.parse(localStorage.getItem(studySpeedSettingsStorageKey)) || createDefaultStudySpeedSettings());
     let weightChartHoverPoint = null;
     let weightChartHitPoints = [];
     let studyProgressChartHoverPoint = null;
@@ -5747,6 +5846,37 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       input.addEventListener("focus", () => setStudyKeyboardMode(true));
       input.addEventListener("blur", () => setTimeout(() => setStudyKeyboardMode(false), 120));
     });
+
+    // v57: szybkie zaliczanie jest sterowane osobno dla przypominajki i zwykłej nauki.
+    function isQuickStudyModeEnabled(mode) {
+      studySpeedSettings = normalizeStudySpeedSettings(studySpeedSettings);
+      return mode === "review" ? studySpeedSettings.quickReview : studySpeedSettings.quickLearn;
+    }
+
+    if (studyQuizAnswerInput) {
+      studyQuizAnswerInput.addEventListener("input", () => {
+        if (!currentStudySession || !isQuickStudyModeEnabled(currentStudySession.mode) || !currentStudyQuiz || currentStudyQuiz.answered) return;
+        const context = getCurrentStudyQuizContext();
+        if (!context) return;
+        const typed = normalizeQuizAnswer(studyQuizAnswerInput.value);
+        if (!typed) return;
+        const answers = getAcceptedStudyAnswers(context.expected);
+        if (answers.includes(typed)) checkStudyQuizAnswer();
+      });
+    }
+
+    if (studyConceptQuizAnswerInput) {
+      studyConceptQuizAnswerInput.addEventListener("input", () => {
+        if (!currentStudyConceptSession || !isQuickStudyModeEnabled(currentStudyConceptSession.mode) || !currentStudyConceptQuiz || currentStudyConceptQuiz.answered) return;
+        const context = getCurrentStudyConceptQuizContext();
+        if (!context) return;
+        const typed = normalizeQuizAnswer(studyConceptQuizAnswerInput.value);
+        const expected = normalizeQuizAnswer(context.concept.definition);
+        if (typed && expected && typed === expected) {
+          gradeStudyConceptQuiz("correct", { autoAdvance: true });
+        }
+      });
+    }
     const developmentList = document.getElementById("developmentList");
     const devLevel = document.getElementById("devLevel");
     const devXpText = document.getElementById("devXpText");
@@ -5820,6 +5950,11 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     const xpStudyInput = document.getElementById("xpStudyInput");
     const xpPerLevelInput = document.getElementById("xpPerLevelInput");
     const debtSettingsInfo = document.getElementById("debtSettingsInfo");
+    const quickReviewSettingCard = document.getElementById("quickReviewSettingCard");
+    const quickLearnSettingCard = document.getElementById("quickLearnSettingCard");
+    const quickReviewToggleButton = document.getElementById("quickReviewToggleButton");
+    const quickLearnToggleButton = document.getElementById("quickLearnToggleButton");
+    const studySpeedSettingsInfo = document.getElementById("studySpeedSettingsInfo");
     const profileWeight = document.getElementById("profileWeight");
     const profileHeight = document.getElementById("profileHeight");
     const profileAge = document.getElementById("profileAge");
@@ -6260,6 +6395,49 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       invalidateDevelopmentCache();
       localStorage.setItem(developmentDebtSettingsStorageKey, JSON.stringify(developmentDebtSettings));
       markLocalDataChanged();
+    }
+
+    function saveStudySpeedSettingsToStorage() {
+      studySpeedSettings = normalizeStudySpeedSettings(studySpeedSettings);
+      localStorage.setItem(studySpeedSettingsStorageKey, JSON.stringify(studySpeedSettings));
+      markLocalDataChanged();
+    }
+
+    function renderStudySpeedSettings() {
+      studySpeedSettings = normalizeStudySpeedSettings(studySpeedSettings);
+      const reviewEnabled = Boolean(studySpeedSettings.quickReview);
+      const learnEnabled = Boolean(studySpeedSettings.quickLearn);
+
+      if (quickReviewSettingCard) quickReviewSettingCard.classList.toggle("active", reviewEnabled);
+      if (quickLearnSettingCard) quickLearnSettingCard.classList.toggle("active", learnEnabled);
+
+      if (quickReviewToggleButton) {
+        quickReviewToggleButton.classList.toggle("enabled", reviewEnabled);
+        quickReviewToggleButton.textContent = reviewEnabled ? "Włączona" : "Wyłączona";
+      }
+
+      if (quickLearnToggleButton) {
+        quickLearnToggleButton.classList.toggle("enabled", learnEnabled);
+        quickLearnToggleButton.textContent = learnEnabled ? "Włączona" : "Wyłączona";
+      }
+
+      if (studySpeedSettingsInfo) {
+        studySpeedSettingsInfo.textContent = `Szybka przypominajka: ${reviewEnabled ? "włączona" : "wyłączona"} • Szybka nauka: ${learnEnabled ? "włączona" : "wyłączona"}.`;
+      }
+    }
+
+    function toggleQuickReviewMode() {
+      studySpeedSettings = normalizeStudySpeedSettings(studySpeedSettings);
+      studySpeedSettings.quickReview = !studySpeedSettings.quickReview;
+      saveStudySpeedSettingsToStorage();
+      renderStudySpeedSettings();
+    }
+
+    function toggleQuickLearnMode() {
+      studySpeedSettings = normalizeStudySpeedSettings(studySpeedSettings);
+      studySpeedSettings.quickLearn = !studySpeedSettings.quickLearn;
+      saveStudySpeedSettingsToStorage();
+      renderStudySpeedSettings();
     }
 
     function getDevelopmentDebtWeights() {
@@ -8337,7 +8515,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       persistStudyRuntimeState();
     }
 
-    function gradeStudyConceptQuiz(result) {
+    function gradeStudyConceptQuiz(result, options = {}) {
       const context = getCurrentStudyConceptQuizContext();
       if (!context || currentStudyConceptQuiz.answered) return;
       const normalized = result === "partial" ? "partial" : result === "wrong" ? "wrong" : "correct";
@@ -8396,6 +8574,15 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
       renderStudyConceptsOnly();
       renderStudyReviewInfo();
       persistStudyRuntimeState();
+
+      if (options.autoAdvance && normalized === "correct") {
+        clearTimeout(studyCorrectAutoNextTimer);
+        studyCorrectAutoNextTimer = setTimeout(() => {
+          if (currentStudyConceptSession && !currentStudyConceptSession.finished && studyConceptQuizModal && studyConceptQuizModal.classList.contains("active")) {
+            startStudyConceptQuiz({ force: true });
+          }
+        }, 500);
+      }
     }
 
     function finishStudyConceptSession() {
@@ -8423,9 +8610,17 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
     }
 
     function handleStudyConceptQuizKey(event) {
-      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+      if (event.key === "Enter" && !event.shiftKey) {
         event.preventDefault();
-        checkStudyConceptQuizAnswer();
+        const context = getCurrentStudyConceptQuizContext();
+        if (!context || !currentStudyConceptQuiz || currentStudyConceptQuiz.answered) return;
+        const typed = normalizeQuizAnswer(studyConceptQuizAnswerInput ? studyConceptQuizAnswerInput.value : "");
+        const expected = normalizeQuizAnswer(context.concept.definition);
+        if (typed && expected && typed === expected) {
+          gradeStudyConceptQuiz("correct", { autoAdvance: true });
+        } else {
+          checkStudyConceptQuizAnswer();
+        }
       }
       if (event.key === "Escape") {
         closeStudyConceptQuizModal();
@@ -9189,11 +9384,12 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           : `Dobrze. Poprawna odpowiedź: <b>${escapeHTML(expected)}</b>.`;
 
         currentStudySession.index += 1;
+        clearTimeout(studyCorrectAutoNextTimer);
         studyCorrectAutoNextTimer = setTimeout(() => {
           if (currentStudySession && !currentStudySession.finished && studyQuizModal && studyQuizModal.classList.contains("active")) {
             startStudyQuiz({ force: true });
           }
-        }, 850);
+        }, isQuickStudyModeEnabled(currentStudySession.mode) ? 500 : (currentStudySession.mode === "review" ? 500 : 850));
       } else if (isNearMiss) {
         currentStudyQuiz.typoChanceUsed = true;
 
@@ -12388,6 +12584,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       renderProfileForm();
       renderDevelopmentDebtSettingsForm();
+      renderStudySpeedSettings();
       renderHabitOrderList();
     }
 
@@ -13273,7 +13470,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
 
       return {
         app: "Habit Pixel",
-        version: 11,
+        version: 12,
         exportedAt: new Date().toISOString(),
         localUpdatedAt: localStorage.getItem(localChangeStorageKey) || new Date().toISOString(),
         year,
@@ -13286,7 +13483,8 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
           noteFolderPasswords,
           study,
           training,
-          developmentDebtSettings
+          developmentDebtSettings,
+          studySpeedSettings
         }
       };
     }
@@ -13354,6 +13552,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         if (data.study && typeof data.study === "object") study = data.study;
         if (data.training && typeof data.training === "object") training = data.training;
         if (data.developmentDebtSettings && typeof data.developmentDebtSettings === "object") developmentDebtSettings = normalizeDevelopmentDebtSettings(data.developmentDebtSettings);
+        if (data.studySpeedSettings && typeof data.studySpeedSettings === "object") studySpeedSettings = normalizeStudySpeedSettings(data.studySpeedSettings);
 
         normalizeHabits();
         normalizeNoteFolders();
@@ -13365,6 +13564,7 @@ fotosynteza = proces wytwarzania glukozy przy udziale światła"></textarea>
         saveStudy();
         saveTraining();
         saveDevelopmentDebtSettingsToStorage();
+        saveStudySpeedSettingsToStorage();
         syncProfileWeightFromLatest();
 
         const importedTime = parsed && (parsed.exportedAt || parsed.localUpdatedAt);
